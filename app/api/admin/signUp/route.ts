@@ -5,8 +5,6 @@ import adminModel from "@/models/Admin";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 
-dbConnect();
-
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();

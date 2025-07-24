@@ -2,10 +2,9 @@ import { dbConnect } from "@/lib/db";
 import teacherModel from "@/models/Teacher";
 import { NextRequest, NextResponse } from "next/server";
 
-dbConnect();
-
 export async function POST(request: NextRequest) {
   try {
+    await dbConnect();
     const reqBody = await request.json();
     const { token } = reqBody;
     console.log("Required token -> ", token);

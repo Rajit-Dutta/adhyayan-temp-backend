@@ -5,10 +5,9 @@ import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
-dbConnect();
-
 export async function POST(request: NextRequest) {
   try {
+    await dbConnect();
     const { email, password } = await request.json();
     const existingTeacher = await teacherModel.findOne({ email });
     if (!existingTeacher) {

@@ -2,8 +2,6 @@ import { dbConnect } from "@/lib/db";
 import teacherModel from "@/models/Teacher";
 import { NextRequest } from "next/server";
 
-dbConnect();
-
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();

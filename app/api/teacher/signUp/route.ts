@@ -5,8 +5,6 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
-dbConnect();
-
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();

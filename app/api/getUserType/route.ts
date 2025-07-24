@@ -2,7 +2,6 @@ import { dbConnect } from "@/lib/db";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 
-dbConnect();
 const jwtSecret = process.env.JWT_SECRET!;
 
 export async function GET() {
