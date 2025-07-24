@@ -1,31 +1,58 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Users, GraduationCap, FileText, Plus } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft, Users, GraduationCap, FileText, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
+import axios from "axios";
 
 export default function StaffDashboard() {
-  const router = useRouter()
-  const [activeTab, setActiveTab] = useState("students")
+  const router = useRouter();
+  const [activeTab, setActiveTab] = useState("students");
+  const [admin, setAdmin] = useState(null);
 
   // Update the useEffect to handle admin authentication
   useEffect(() => {
-    const userType = localStorage.getItem("userType")
-    const adminData = localStorage.getItem("adminData")
+    fetchAdminData();
+  }, [router]);
 
-    if (userType !== "admin") {
-      router.push("/")
-      return
-    }
+  const fetchAdminData = async () => {
+    try {
+      const userRes = await axios.get(
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getUserType`,
+        {
+          withCredentials: true,
+        }
+      );
 
-    // If it's an admin member, get their data
-    if (userType === "admin" && adminData) {
-      const parsedAdmin = JSON.parse(adminData)
-      console.log("Admin member logged in:", parsedAdmin)
+      const { userType, email } = userRes.data.jwtDecoded;
+
+      if (userType !== "admin") {
+        router.push("/");
+        return;
+      }
+
+      const adminRes = await axios.get(
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getTeacherData`,
+        {
+          params: { email },
+        }
+      );
+
+      console.log(adminRes.data);
+
+      const adminPayload = adminRes.data.teacherData;
+      setAdmin(adminPayload); // Assuming this is the parsed object already
+      if (userType === "admin" && adminPayload) {
+        const parsedAdmin = adminPayload;
+        console.log("Admin member logged in:", parsedAdmin);
+      }
+    } catch (error) {
+      console.error("Error during admin dashboard data fetch:", error);
+      router.push("/");
     }
-  }, [router])
+  };
 
   return (
     <div className="min-h-screen bg-black p-4">
@@ -33,8 +60,12 @@ export default function StaffDashboard() {
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-black text-green-500 mb-2">STAFF PANEL</h1>
-            <p className="text-xl font-bold text-white">Manage students, teachers, and question papers</p>
+            <h1 className="text-4xl font-black text-green-500 mb-2">
+              STAFF PANEL
+            </h1>
+            <p className="text-xl font-bold text-white">
+              Manage students, teachers, and question papers
+            </p>
           </div>
           <Button
             onClick={() => router.push("/dashboard")}
@@ -50,7 +81,9 @@ export default function StaffDashboard() {
           <Button
             onClick={() => setActiveTab("students")}
             className={`font-black border-4 border-green-500 shadow-[4px_4px_0px_0px_#22c55e] hover:translate-x-1 hover:translate-y-1 hover:shadow-[2px_2px_0px_0px_#22c55e] transition-all ${
-              activeTab === "students" ? "bg-green-500 text-white" : "bg-white text-black hover:bg-gray-100"
+              activeTab === "students"
+                ? "bg-green-500 text-white"
+                : "bg-white text-black hover:bg-gray-100"
             }`}
           >
             <Users className="w-4 h-4 mr-2" />
@@ -59,7 +92,9 @@ export default function StaffDashboard() {
           <Button
             onClick={() => setActiveTab("teachers")}
             className={`font-black border-4 border-green-500 shadow-[4px_4px_0px_0px_#22c55e] hover:translate-x-1 hover:translate-y-1 hover:shadow-[2px_2px_0px_0px_#22c55e] transition-all ${
-              activeTab === "teachers" ? "bg-green-500 text-white" : "bg-white text-black hover:bg-gray-100"
+              activeTab === "teachers"
+                ? "bg-green-500 text-white"
+                : "bg-white text-black hover:bg-gray-100"
             }`}
           >
             <GraduationCap className="w-4 h-4 mr-2" />
@@ -68,7 +103,9 @@ export default function StaffDashboard() {
           <Button
             onClick={() => setActiveTab("questions")}
             className={`font-black border-4 border-green-500 shadow-[4px_4px_0px_0px_#22c55e] hover:translate-x-1 hover:translate-y-1 hover:shadow-[2px_2px_0px_0px_#22c55e] transition-all ${
-              activeTab === "questions" ? "bg-green-500 text-white" : "bg-white text-black hover:bg-gray-100"
+              activeTab === "questions"
+                ? "bg-green-500 text-white"
+                : "bg-white text-black hover:bg-gray-100"
             }`}
           >
             <FileText className="w-4 h-4 mr-2" />
@@ -81,7 +118,7 @@ export default function StaffDashboard() {
         {activeTab === "questions" && <QuestionPaperManager />}
       </div>
     </div>
-  )
+  );
 }
 
 function StudentManager() {
@@ -113,39 +150,49 @@ function StudentManager() {
       phone: "9876543212",
       rollNo: "2024003",
     },
-  ])
+  ]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
       {/* Add Student Form */}
       <Card className="lg:col-span-1 bg-green-500 border-4 border-white shadow-[8px_8px_0px_0px_#fff]">
         <CardHeader>
-          <CardTitle className="text-xl font-black text-white">ADD STUDENT</CardTitle>
+          <CardTitle className="text-xl font-black text-white">
+            ADD STUDENT
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <label className="block text-sm font-black text-white mb-1">FULL NAME</label>
+            <label className="block text-sm font-black text-white mb-1">
+              FULL NAME
+            </label>
             <input
               className="w-full p-2 border-4 border-black font-bold bg-white text-black"
               placeholder="Student name"
             />
           </div>
           <div>
-            <label className="block text-sm font-black text-white mb-1">EMAIL</label>
+            <label className="block text-sm font-black text-white mb-1">
+              EMAIL
+            </label>
             <input
               className="w-full p-2 border-4 border-black font-bold bg-white text-black"
               placeholder="Email address"
             />
           </div>
           <div>
-            <label className="block text-sm font-black text-white mb-1">ROLL NUMBER</label>
+            <label className="block text-sm font-black text-white mb-1">
+              ROLL NUMBER
+            </label>
             <input
               className="w-full p-2 border-4 border-black font-bold bg-white text-black"
               placeholder="Roll number"
             />
           </div>
           <div>
-            <label className="block text-sm font-black text-white mb-1">GRADE</label>
+            <label className="block text-sm font-black text-white mb-1">
+              GRADE
+            </label>
             <select className="w-full p-2 border-4 border-black font-bold bg-white text-black">
               <option>9th</option>
               <option>10th</option>
@@ -154,7 +201,9 @@ function StudentManager() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-black text-white mb-1">SECTION</label>
+            <label className="block text-sm font-black text-white mb-1">
+              SECTION
+            </label>
             <select className="w-full p-2 border-4 border-black font-bold bg-white text-black">
               <option>A</option>
               <option>B</option>
@@ -162,7 +211,9 @@ function StudentManager() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-black text-white mb-1">PHONE</label>
+            <label className="block text-sm font-black text-white mb-1">
+              PHONE
+            </label>
             <input
               className="w-full p-2 border-4 border-black font-bold bg-white text-black"
               placeholder="Phone number"
@@ -178,17 +229,26 @@ function StudentManager() {
       {/* Student List */}
       <Card className="lg:col-span-3 bg-white border-4 border-green-500 shadow-[8px_8px_0px_0px_#22c55e]">
         <CardHeader>
-          <CardTitle className="text-2xl font-black text-black">STUDENT DATABASE</CardTitle>
+          <CardTitle className="text-2xl font-black text-black">
+            STUDENT DATABASE
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {students.map((student) => (
-              <div key={student.id} className="bg-gray-100 border-4 border-black p-4 shadow-[4px_4px_0px_0px_#000]">
+              <div
+                key={student.id}
+                className="bg-gray-100 border-4 border-black p-4 shadow-[4px_4px_0px_0px_#000]"
+              >
                 <div className="grid grid-cols-1 md:grid-cols-7 gap-4 items-center">
                   <div className="md:col-span-2">
-                    <h3 className="text-lg font-black text-black">{student.name}</h3>
+                    <h3 className="text-lg font-black text-black">
+                      {student.name}
+                    </h3>
                     <p className="font-bold text-gray-700">{student.email}</p>
-                    <p className="font-bold text-gray-600">Roll: {student.rollNo}</p>
+                    <p className="font-bold text-gray-600">
+                      Roll: {student.rollNo}
+                    </p>
                   </div>
                   <div>
                     <span className="bg-green-300 border-2 border-black px-2 py-1 font-black text-sm">
@@ -218,7 +278,7 @@ function StudentManager() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
 
 function TeacherManager() {
@@ -259,40 +319,52 @@ function TeacherManager() {
       empId: "EMP004",
       status: "Active",
     },
-  ])
+  ]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
       {/* Add Teacher Form */}
       <Card className="lg:col-span-1 bg-white border-2 border-green-500 rounded-2xl shadow-lg">
         <CardHeader>
-          <CardTitle className="text-xl font-black text-black">ADD TEACHER</CardTitle>
-          <p className="text-sm font-semibold text-gray-600">Or approve new registrations</p>
+          <CardTitle className="text-xl font-black text-black">
+            ADD TEACHER
+          </CardTitle>
+          <p className="text-sm font-semibold text-gray-600">
+            Or approve new registrations
+          </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <label className="block text-sm font-black text-black mb-1">FULL NAME</label>
+            <label className="block text-sm font-black text-black mb-1">
+              FULL NAME
+            </label>
             <input
               className="w-full p-3 border-2 border-gray-300 font-semibold bg-white text-black rounded-xl focus:border-green-500"
               placeholder="Teacher name"
             />
           </div>
           <div>
-            <label className="block text-sm font-black text-black mb-1">EMAIL</label>
+            <label className="block text-sm font-black text-black mb-1">
+              EMAIL
+            </label>
             <input
               className="w-full p-3 border-2 border-gray-300 font-semibold bg-white text-black rounded-xl focus:border-green-500"
               placeholder="Email address"
             />
           </div>
           <div>
-            <label className="block text-sm font-black text-black mb-1">EMPLOYEE ID</label>
+            <label className="block text-sm font-black text-black mb-1">
+              EMPLOYEE ID
+            </label>
             <input
               className="w-full p-3 border-2 border-gray-300 font-semibold bg-white text-black rounded-xl focus:border-green-500"
               placeholder="Employee ID"
             />
           </div>
           <div>
-            <label className="block text-sm font-black text-black mb-1">SUBJECT</label>
+            <label className="block text-sm font-black text-black mb-1">
+              SUBJECT
+            </label>
             <select className="w-full p-3 border-2 border-gray-300 font-semibold bg-white text-black rounded-xl focus:border-green-500">
               <option>Mathematics</option>
               <option>Science</option>
@@ -305,7 +377,9 @@ function TeacherManager() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-black text-black mb-1">PHONE</label>
+            <label className="block text-sm font-black text-black mb-1">
+              PHONE
+            </label>
             <input
               className="w-full p-3 border-2 border-gray-300 font-semibold bg-white text-black rounded-xl focus:border-green-500"
               placeholder="Phone number"
@@ -321,18 +395,31 @@ function TeacherManager() {
       {/* Teacher List */}
       <Card className="lg:col-span-3 bg-gradient-to-br from-green-500 to-green-600 border-2 border-white rounded-2xl shadow-lg">
         <CardHeader>
-          <CardTitle className="text-2xl font-black text-white">TEACHER DATABASE</CardTitle>
-          <p className="text-green-100 font-semibold">Manage all registered teachers</p>
+          <CardTitle className="text-2xl font-black text-white">
+            TEACHER DATABASE
+          </CardTitle>
+          <p className="text-green-100 font-semibold">
+            Manage all registered teachers
+          </p>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {teachers.map((teacher) => (
-              <div key={teacher.id} className="bg-white border-2 border-black p-4 rounded-xl shadow-sm">
+              <div
+                key={teacher.id}
+                className="bg-white border-2 border-black p-4 rounded-xl shadow-sm"
+              >
                 <div className="grid grid-cols-1 md:grid-cols-6 gap-4 items-center">
                   <div className="md:col-span-2">
-                    <h3 className="text-lg font-black text-black">{teacher.name}</h3>
-                    <p className="font-semibold text-gray-700">{teacher.email}</p>
-                    <p className="font-semibold text-gray-600">ID: {teacher.empId}</p>
+                    <h3 className="text-lg font-black text-black">
+                      {teacher.name}
+                    </h3>
+                    <p className="font-semibold text-gray-700">
+                      {teacher.email}
+                    </p>
+                    <p className="font-semibold text-gray-600">
+                      ID: {teacher.empId}
+                    </p>
                   </div>
                   <div>
                     <span className="bg-green-100 border-2 border-green-300 text-green-700 px-3 py-1 font-black text-sm rounded-lg">
@@ -340,7 +427,9 @@ function TeacherManager() {
                     </span>
                   </div>
                   <div>
-                    <p className="font-semibold text-gray-700">{teacher.phone}</p>
+                    <p className="font-semibold text-gray-700">
+                      {teacher.phone}
+                    </p>
                   </div>
                   <div>
                     <span className="bg-green-100 border-2 border-green-300 text-green-700 px-2 py-1 font-bold text-xs rounded-lg">
@@ -362,7 +451,7 @@ function TeacherManager() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
 
 function QuestionPaperManager() {
@@ -394,25 +483,31 @@ function QuestionPaperManager() {
       difficulty: "Easy",
       createdDate: "2024-01-05",
     },
-  ])
+  ]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
       {/* Add Question Paper Form */}
       <Card className="lg:col-span-1 bg-white border-4 border-green-500 shadow-[8px_8px_0px_0px_#22c55e]">
         <CardHeader>
-          <CardTitle className="text-xl font-black text-black">UPLOAD QUESTION PAPER</CardTitle>
+          <CardTitle className="text-xl font-black text-black">
+            UPLOAD QUESTION PAPER
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <label className="block text-sm font-black text-black mb-1">PAPER TITLE</label>
+            <label className="block text-sm font-black text-black mb-1">
+              PAPER TITLE
+            </label>
             <input
               className="w-full p-2 border-4 border-black font-bold bg-gray-100 text-black"
               placeholder="Question paper title"
             />
           </div>
           <div>
-            <label className="block text-sm font-black text-black mb-1">SUBJECT</label>
+            <label className="block text-sm font-black text-black mb-1">
+              SUBJECT
+            </label>
             <select className="w-full p-2 border-4 border-black font-bold bg-gray-100 text-black">
               <option>Mathematics</option>
               <option>Science</option>
@@ -423,7 +518,9 @@ function QuestionPaperManager() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-black text-black mb-1">GRADE</label>
+            <label className="block text-sm font-black text-black mb-1">
+              GRADE
+            </label>
             <select className="w-full p-2 border-4 border-black font-bold bg-gray-100 text-black">
               <option>9th</option>
               <option>10th</option>
@@ -432,7 +529,9 @@ function QuestionPaperManager() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-black text-black mb-1">DIFFICULTY</label>
+            <label className="block text-sm font-black text-black mb-1">
+              DIFFICULTY
+            </label>
             <select className="w-full p-2 border-4 border-black font-bold bg-gray-100 text-black">
               <option>Easy</option>
               <option>Medium</option>
@@ -440,7 +539,9 @@ function QuestionPaperManager() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-black text-black mb-1">TOTAL QUESTIONS</label>
+            <label className="block text-sm font-black text-black mb-1">
+              TOTAL QUESTIONS
+            </label>
             <input
               type="number"
               className="w-full p-2 border-4 border-black font-bold bg-gray-100 text-black"
@@ -448,7 +549,9 @@ function QuestionPaperManager() {
             />
           </div>
           <div>
-            <label className="block text-sm font-black text-black mb-1">UPLOAD FILE</label>
+            <label className="block text-sm font-black text-black mb-1">
+              UPLOAD FILE
+            </label>
             <input
               type="file"
               className="w-full p-2 border-4 border-black font-bold bg-gray-100 text-black"
@@ -465,19 +568,28 @@ function QuestionPaperManager() {
       {/* Question Paper List */}
       <Card className="lg:col-span-3 bg-green-500 border-4 border-white shadow-[8px_8px_0px_0px_#fff]">
         <CardHeader>
-          <CardTitle className="text-2xl font-black text-white">QUESTION PAPER BANK</CardTitle>
+          <CardTitle className="text-2xl font-black text-white">
+            QUESTION PAPER BANK
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             {questionPapers.map((paper) => (
-              <div key={paper.id} className="bg-white border-4 border-black p-4 shadow-[4px_4px_0px_0px_#000]">
+              <div
+                key={paper.id}
+                className="bg-white border-4 border-black p-4 shadow-[4px_4px_0px_0px_#000]"
+              >
                 <div className="grid grid-cols-1 md:grid-cols-7 gap-4 items-center">
                   <div className="md:col-span-2">
-                    <h3 className="text-lg font-black text-black">{paper.title}</h3>
+                    <h3 className="text-lg font-black text-black">
+                      {paper.title}
+                    </h3>
                     <p className="font-bold text-gray-700">
                       {paper.subject} - {paper.grade}
                     </p>
-                    <p className="font-bold text-gray-600">Created: {paper.createdDate}</p>
+                    <p className="font-bold text-gray-600">
+                      Created: {paper.createdDate}
+                    </p>
                   </div>
                   <div>
                     <span className="bg-green-300 border-2 border-black px-2 py-1 font-black text-sm">
@@ -490,8 +602,8 @@ function QuestionPaperManager() {
                         paper.difficulty === "Easy"
                           ? "bg-green-300"
                           : paper.difficulty === "Medium"
-                            ? "bg-yellow-300"
-                            : "bg-red-300"
+                          ? "bg-yellow-300"
+                          : "bg-red-300"
                       }`}
                     >
                       {paper.difficulty}
@@ -518,5 +630,5 @@ function QuestionPaperManager() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

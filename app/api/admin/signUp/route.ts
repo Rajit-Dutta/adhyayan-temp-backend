@@ -41,8 +41,9 @@ export async function POST(request: NextRequest) {
         verifyToken,
         verifyTokenExpiry,
       });
-      await newAdmin.save();
+      const savedAdmin = await newAdmin.save();
       const tokenData = {
+        id: savedAdmin._id,
         email: newAdmin.email,
         userType: "admin",
       };
@@ -51,6 +52,7 @@ export async function POST(request: NextRequest) {
       });
       const response = NextResponse.json(
         {
+          id: savedAdmin._id,
           message: "Sign up successful",
           success: true,
         },

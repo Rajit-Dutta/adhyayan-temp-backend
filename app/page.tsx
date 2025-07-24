@@ -61,8 +61,9 @@ export default function LoginPage() {
         error: "Log in unsuccessful! ❌.",
       });
       await signInPromise;
-
-      console.log("SIGNIN RESPONSE ✅", response.data);
+      window.location.href = `${process.env.NEXT_PUBLIC_DOMAIN!}/staff/${
+        response.data.id
+      }`;
     } catch (error) {
       console.error("Signup error:", error);
       setError("Signup failed. Please try again later.");
@@ -94,7 +95,9 @@ export default function LoginPage() {
       });
       await signInPromise;
 
-      console.log("SIGNIN RESPONSE ✅", response.data);
+      window.location.href = `${process.env.NEXT_PUBLIC_DOMAIN!}/teacher/${
+        response.data.id
+      }`;
     } catch (error) {
       console.error("Signup error:", error);
       setError("Signup failed. Please try again later.");
@@ -132,9 +135,9 @@ export default function LoginPage() {
         error: "Sign up unsuccessful! ❌",
       });
 
-      console.log("SIGNUP RESPONSE ✅", response.data);
-
-      window.location.href = `${process.env.NEXT_PUBLIC_DOMAIN!}/dashboard`;
+      window.location.href = `${process.env.NEXT_PUBLIC_DOMAIN!}/teacher/${
+        response.data.id
+      }`;
 
       setShowSignup(false); // Hide
     } catch (error) {
@@ -172,11 +175,9 @@ export default function LoginPage() {
         success: "Sign up successful! ✅",
         error: "Sign up unsuccessful! ❌",
       });
-
-      console.log("SIGNUP RESPONSE ✅", response.data);
-
-      // Optional post-signup logic
-      // router.push("/teacher"); or setShowSignup(false);
+      window.location.href = `${process.env.NEXT_PUBLIC_DOMAIN!}/staff/${
+        response.data.id
+      }`;
     } catch (error) {
       console.error("Signup error:", error);
       setError("Signup failed. Please try again later.");

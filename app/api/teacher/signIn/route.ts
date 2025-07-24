@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
     });
     const response = NextResponse.json(
       {
+        id: existingTeacher._id,
         message: "Sign in successful",
         success: true,
       },

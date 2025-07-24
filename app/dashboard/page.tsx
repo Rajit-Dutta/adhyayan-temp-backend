@@ -36,9 +36,10 @@ export default function Dashboard() {
         throw new Error("No response from server");
       }
       setUserType(response.data.jwtDecoded.userType);
+      console.log(response.data.jwtDecoded);
       let typeOfUser = response.data.jwtDecoded.userType;
       if (typeOfUser === "teacher") {
-        router.push("/teacher");
+        router.push(`/teacher/${response.data.jwtDecoded.id}`);
         return null;
       }
       else if (typeOfUser === "admin") {

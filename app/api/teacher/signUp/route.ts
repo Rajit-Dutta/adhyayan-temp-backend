@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
         verifyToken,
         verifyTokenExpiry,
       });
-      await newTeacher.save();
+      const savedTeacher = await newTeacher.save();
       // try {
       //   await sendEmail({
       //     email: savedTeacher.email,
@@ -57,6 +57,7 @@ export async function POST(request: NextRequest) {
       // }
 
       const tokenData = {
+        id: savedTeacher._id,
         email: newTeacher.email,
         userType: "teacher",
       };
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest) {
       });
       const response = NextResponse.json(
         {
+          id: savedTeacher._id,
           message: "Sign Up successful",
           success: true,
         },
