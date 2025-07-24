@@ -1,44 +1,71 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, GraduationCap, BookOpen, LogOut, UserCheck, FileText, ArrowRight, BarChart3 } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, use } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Users,
+  GraduationCap,
+  BookOpen,
+  LogOut,
+  UserCheck,
+  FileText,
+  ArrowRight,
+  BarChart3,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import axios from "axios";
 
 export default function Dashboard() {
-  const router = useRouter()
-  const [userType, setUserType] = useState<string | null>(null)
+  const router = useRouter();
+  const [userType, setUserType] = useState<string | null>(null);
 
-  // useEffect(() => {
-  //   const type = localStorage.getItem("userType")
-  //   if (!type) {
-  //     router.push("/")
-  //     return
-  //   }
-  //   setUserType(type)
-  // }, [router])
+  useEffect(() => {
+    fetchUserType();
+  }, [router]);
+
+  const fetchUserType = async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getUserType`,
+        {
+          withCredentials: true,
+        }
+      );
+      if (!response) {
+        throw new Error("No response from server");
+      }
+      setUserType(response.data.jwtDecoded.userType);
+      let typeOfUser = response.data.jwtDecoded.userType;
+      if (typeOfUser === "teacher") {
+        router.push("/teacher");
+        return null;
+      }
+      else if (typeOfUser === "admin") {
+        router.push("/admin");
+        return null;
+      }
+    } catch (error) {
+      console.error("Error fetching user type:", error);
+      setUserType(null);
+    }
+  };
 
   const handleLogout = () => {
-    localStorage.removeItem("userType")
-    localStorage.removeItem("teacherId")
-    localStorage.removeItem("teacherData")
-    localStorage.removeItem("adminId")
-    localStorage.removeItem("adminData")
-    router.push("/")
-  }
+    localStorage.removeItem("userType");
+    localStorage.removeItem("teacherId");
+    localStorage.removeItem("teacherData");
+    localStorage.removeItem("adminId");
+    localStorage.removeItem("adminData");
+    router.push("/");
+  };
 
   if (!userType) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
         <div className="text-white text-xl font-semibold">Loading...</div>
       </div>
-    )
-  }
-
-  if (userType === "teacher") {
-    router.push("/teacher")
-    return null
+    );
   }
 
   return (
@@ -51,7 +78,9 @@ export default function Dashboard() {
               ADHYAYAN
             </h1>
             <p className="text-xl font-semibold text-white">Admin Dashboard</p>
-            <p className="text-lg font-medium text-gray-300">Choose a management area to continue</p>
+            <p className="text-lg font-medium text-gray-300">
+              Choose a management area to continue
+            </p>
           </div>
           <Button
             onClick={handleLogout}
@@ -74,14 +103,20 @@ export default function Dashboard() {
               <div className="inline-flex items-center justify-center w-20 h-20 bg-white border-2 border-black rounded-2xl mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
                 <Users className="w-10 h-10 text-green-600" />
               </div>
-              <CardTitle className="text-3xl font-black text-white mb-2">STUDENT MANAGEMENT</CardTitle>
-              <p className="text-green-100 font-semibold">Manage student records and information</p>
+              <CardTitle className="text-3xl font-black text-white mb-2">
+                STUDENT MANAGEMENT
+              </CardTitle>
+              <p className="text-green-100 font-semibold">
+                Manage student records and information
+              </p>
             </CardHeader>
             <CardContent className="relative z-10">
               <div className="grid grid-cols-1 gap-3 mb-6">
                 <div className="flex items-center space-x-3 p-4 bg-white/20 border-2 border-white/30 rounded-xl backdrop-blur-sm">
                   <UserCheck className="w-5 h-5 text-white" />
-                  <span className="font-bold text-white">Student Registration</span>
+                  <span className="font-bold text-white">
+                    Student Registration
+                  </span>
                 </div>
                 <div className="flex items-center space-x-3 p-4 bg-white/20 border-2 border-white/30 rounded-xl backdrop-blur-sm">
                   <FileText className="w-5 h-5 text-white" />
@@ -89,7 +124,9 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center space-x-3 p-4 bg-white/20 border-2 border-white/30 rounded-xl backdrop-blur-sm">
                   <BarChart3 className="w-5 h-5 text-white" />
-                  <span className="font-bold text-white">Performance Tracking</span>
+                  <span className="font-bold text-white">
+                    Performance Tracking
+                  </span>
                 </div>
               </div>
               <div className="flex items-center justify-center text-white font-bold">
@@ -109,22 +146,32 @@ export default function Dashboard() {
               <div className="inline-flex items-center justify-center w-20 h-20 bg-green-500 border-2 border-black rounded-2xl mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
                 <GraduationCap className="w-10 h-10 text-white" />
               </div>
-              <CardTitle className="text-3xl font-black text-black mb-2">TEACHER MANAGEMENT</CardTitle>
-              <p className="text-gray-600 font-semibold">Manage faculty and teaching staff</p>
+              <CardTitle className="text-3xl font-black text-black mb-2">
+                TEACHER MANAGEMENT
+              </CardTitle>
+              <p className="text-gray-600 font-semibold">
+                Manage faculty and teaching staff
+              </p>
             </CardHeader>
             <CardContent className="relative z-10">
               <div className="grid grid-cols-1 gap-3 mb-6">
                 <div className="flex items-center space-x-3 p-4 bg-black border-2 border-green-500 rounded-xl">
                   <GraduationCap className="w-5 h-5 text-white" />
-                  <span className="font-bold text-white">Faculty Registration</span>
+                  <span className="font-bold text-white">
+                    Faculty Registration
+                  </span>
                 </div>
                 <div className="flex items-center space-x-3 p-4 bg-black border-2 border-green-500 rounded-xl">
                   <BookOpen className="w-5 h-5 text-white" />
-                  <span className="font-bold text-white">Subject Assignment</span>
+                  <span className="font-bold text-white">
+                    Subject Assignment
+                  </span>
                 </div>
                 <div className="flex items-center space-x-3 p-4 bg-black border-2 border-green-500 rounded-xl">
                   <BarChart3 className="w-5 h-5 text-white" />
-                  <span className="font-bold text-white">Performance Review</span>
+                  <span className="font-bold text-white">
+                    Performance Review
+                  </span>
                 </div>
               </div>
               <div className="flex items-center justify-center text-black font-bold">
@@ -147,8 +194,12 @@ export default function Dashboard() {
               <div className="inline-flex items-center justify-center w-20 h-20 bg-green-500 border-2 border-black rounded-2xl mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
                 <FileText className="w-10 h-10 text-white" />
               </div>
-              <CardTitle className="text-3xl font-black text-black mb-2">QUESTION PAPERS</CardTitle>
-              <p className="text-gray-600 font-semibold">Manage examination papers and assessments</p>
+              <CardTitle className="text-3xl font-black text-black mb-2">
+                QUESTION PAPERS
+              </CardTitle>
+              <p className="text-gray-600 font-semibold">
+                Manage examination papers and assessments
+              </p>
             </CardHeader>
             <CardContent className="relative z-10">
               <div className="grid grid-cols-1 gap-3 mb-6">
@@ -182,18 +233,26 @@ export default function Dashboard() {
               <div className="inline-flex items-center justify-center w-20 h-20 bg-white border-2 border-black rounded-2xl mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
                 <BarChart3 className="w-10 h-10 text-green-600" />
               </div>
-              <CardTitle className="text-3xl font-black text-white mb-2">REPORTS & ANALYTICS</CardTitle>
-              <p className="text-green-100 font-semibold">Comprehensive performance insights</p>
+              <CardTitle className="text-3xl font-black text-white mb-2">
+                REPORTS & ANALYTICS
+              </CardTitle>
+              <p className="text-green-100 font-semibold">
+                Comprehensive performance insights
+              </p>
             </CardHeader>
             <CardContent className="relative z-10">
               <div className="grid grid-cols-1 gap-3 mb-6">
                 <div className="flex items-center space-x-3 p-4 bg-white/20 border-2 border-white/30 rounded-xl backdrop-blur-sm">
                   <BarChart3 className="w-5 h-5 text-white" />
-                  <span className="font-bold text-white">Performance Reports</span>
+                  <span className="font-bold text-white">
+                    Performance Reports
+                  </span>
                 </div>
                 <div className="flex items-center space-x-3 p-4 bg-white/20 border-2 border-white/30 rounded-xl backdrop-blur-sm">
                   <Users className="w-5 h-5 text-white" />
-                  <span className="font-bold text-white">Attendance Analytics</span>
+                  <span className="font-bold text-white">
+                    Attendance Analytics
+                  </span>
                 </div>
                 <div className="flex items-center space-x-3 p-4 bg-white/20 border-2 border-white/30 rounded-xl backdrop-blur-sm">
                   <FileText className="w-5 h-5 text-white" />
@@ -231,10 +290,12 @@ export default function Dashboard() {
           <Card className="bg-gradient-to-br from-white to-gray-50 border-2 border-green-500 rounded-2xl shadow-lg p-6 text-center">
             <BookOpen className="w-8 h-8 text-green-600 mx-auto mb-3" />
             <div className="text-3xl font-black text-black">45</div>
-            <div className="text-sm font-semibold text-gray-600">Assignments</div>
+            <div className="text-sm font-semibold text-gray-600">
+              Assignments
+            </div>
           </Card>
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -1,10 +1,23 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Plus, Eye, Edit, Trash2, Users, BookOpen, LogOut, Calendar, Clock, TrendingUp } from "lucide-react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ArrowLeft,
+  Plus,
+  Eye,
+  Edit,
+  Trash2,
+  Users,
+  BookOpen,
+  LogOut,
+  Calendar,
+  Clock,
+  TrendingUp,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import axios from "axios";
 
 // Mock assignments data for each teacher
 const TEACHER_ASSIGNMENTS = {
@@ -82,41 +95,69 @@ const TEACHER_ASSIGNMENTS = {
       classes: ["10B", "11A"],
     },
   ],
-}
+};
 
 export default function TeacherDashboard() {
-  const router = useRouter()
-  const [teacher, setTeacher] = useState<any>(null)
-  const [assignments, setAssignments] = useState<any[]>([])
+  const router = useRouter();
+  const [teacher, setTeacher] = useState<any>(null);
+  const [assignments, setAssignments] = useState<any[]>([]);
 
   useEffect(() => {
-    const userType = localStorage.getItem("userType")
-    const teacherData = localStorage.getItem("teacherData")
-    const teacherId = localStorage.getItem("teacherId")
+    fetchTeacherData();
+  }, [router]);
 
-    if (userType !== "teacher" || !teacherData || !teacherId) {
-      router.push("/")
-      return
+  const fetchTeacherData = async () => {
+    try {
+      const userRes = await axios.get(
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getUserType`,
+        {
+          withCredentials: true,
+        }
+      );
+
+      const { userType, email } = userRes.data.jwtDecoded;
+
+      if (userType !== "teacher") {
+        router.push("/");
+        return;
+      }
+
+      // Step 2: Get teacher data using email
+      const teacherRes = await axios.get(
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getTeacherData`,
+        {
+          params: { email },
+        }
+      );
+
+      const teacherPayload = teacherRes.data;
+      setTeacher(teacherPayload); // Assuming this is the parsed object already
+      setAssignments(
+        TEACHER_ASSIGNMENTS[
+          teacherPayload._id as keyof typeof TEACHER_ASSIGNMENTS
+        ] || []
+      );
+    } catch (error) {
+      console.error("Error during teacher dashboard data fetch:", error);
+      router.push("/");
     }
+  };
 
-    const parsedTeacher = JSON.parse(teacherData)
-    setTeacher(parsedTeacher)
-    setAssignments(TEACHER_ASSIGNMENTS[teacherId as keyof typeof TEACHER_ASSIGNMENTS] || [])
-  }, [router])
+  console.log(teacher);
 
   const handleLogout = () => {
-    localStorage.removeItem("userType")
-    localStorage.removeItem("teacherId")
-    localStorage.removeItem("teacherData")
-    router.push("/")
-  }
+    localStorage.removeItem("userType");
+    localStorage.removeItem("teacherId");
+    localStorage.removeItem("teacherData");
+    router.push("/");
+  };
 
   if (!teacher) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
         <div className="text-white text-xl font-semibold">Loading...</div>
       </div>
-    )
+    );
   }
 
   const getSubjectColor = (subject: string) => {
@@ -125,9 +166,11 @@ export default function TeacherDashboard() {
       Science: "from-green-500 to-green-600",
       English: "from-purple-500 to-purple-600",
       History: "from-orange-500 to-orange-600",
-    }
-    return colors[subject as keyof typeof colors] || "from-gray-500 to-gray-600"
-  }
+    };
+    return (
+      colors[subject as keyof typeof colors] || "from-gray-500 to-gray-600"
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black p-6">
@@ -136,10 +179,14 @@ export default function TeacherDashboard() {
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 gap-4">
           <div>
             <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-green-600 mb-2">
-              Welcome, {teacher.name.split(" ")[0]}
+              Welcome, {teacher.teacherData.fullName.split(" ")[0]}
             </h1>
-            <p className="text-xl font-semibold text-white">{teacher.subject} Teacher Dashboard</p>
-            <p className="text-lg font-medium text-gray-300">Classes: {teacher.classes.join(", ")}</p>
+            <p className="text-xl font-semibold text-white">
+              {teacher.subject} Teacher Dashboard
+            </p>
+            <p className="text-lg font-medium text-gray-300">
+              Classes: {teacher.teacherData.classesToTeach.join(", ")}
+            </p>
           </div>
           <div className="flex space-x-3">
             <Button
@@ -163,11 +210,17 @@ export default function TeacherDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
           {/* Stats Cards - Bento Style */}
           <Card
-            className={`bg-gradient-to-br ${getSubjectColor(teacher.subject)} border-2 border-white rounded-2xl shadow-lg p-6 text-center`}
+            className={`bg-gradient-to-br ${getSubjectColor(
+              teacher.subject
+            )} border-2 border-white rounded-2xl shadow-lg p-6 text-center`}
           >
             <BookOpen className="w-8 h-8 text-white mx-auto mb-3" />
-            <div className="text-3xl font-black text-white">{assignments.length}</div>
-            <div className="text-sm font-semibold text-white/90">Total Assignments</div>
+            <div className="text-3xl font-black text-white">
+              {assignments.length}
+            </div>
+            <div className="text-sm font-semibold text-white/90">
+              Total Assignments
+            </div>
           </Card>
 
           <Card className="bg-gradient-to-br from-white to-gray-50 border-2 border-green-500 rounded-2xl shadow-lg p-6 text-center">
@@ -175,7 +228,9 @@ export default function TeacherDashboard() {
             <div className="text-3xl font-black text-black">
               {assignments.filter((a) => a.status === "Active").length}
             </div>
-            <div className="text-sm font-semibold text-gray-600">Active Assignments</div>
+            <div className="text-sm font-semibold text-gray-600">
+              Active Assignments
+            </div>
           </Card>
 
           <Card className="bg-gradient-to-br from-green-500 to-green-600 border-2 border-white rounded-2xl shadow-lg p-6 text-center">
@@ -183,7 +238,9 @@ export default function TeacherDashboard() {
             <div className="text-3xl font-black text-white">
               {assignments.reduce((sum, a) => sum + a.submittedCount, 0)}
             </div>
-            <div className="text-sm font-semibold text-white/90">Submissions</div>
+            <div className="text-sm font-semibold text-white/90">
+              Submissions
+            </div>
           </Card>
 
           <Card className="bg-gradient-to-br from-white to-gray-50 border-2 border-green-500 rounded-2xl shadow-lg p-6 text-center">
@@ -218,8 +275,12 @@ export default function TeacherDashboard() {
             {assignments.length === 0 ? (
               <div className="text-center py-12">
                 <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-xl font-bold text-gray-600 mb-2">No assignments created yet</p>
-                <p className="text-gray-500">Click "Create New Assignment" to get started</p>
+                <p className="text-xl font-bold text-gray-600 mb-2">
+                  No assignments created yet
+                </p>
+                <p className="text-gray-500">
+                  Click "Create New Assignment" to get started
+                </p>
               </div>
             ) : (
               <div className="grid gap-4">
@@ -231,8 +292,12 @@ export default function TeacherDashboard() {
                     <CardContent className="p-6">
                       <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 items-center">
                         <div className="lg:col-span-2">
-                          <h3 className="text-xl font-black text-black mb-1">{assignment.title}</h3>
-                          <p className="font-semibold text-gray-600 mb-1">{assignment.subject}</p>
+                          <h3 className="text-xl font-black text-black mb-1">
+                            {assignment.title}
+                          </h3>
+                          <p className="font-semibold text-gray-600 mb-1">
+                            {assignment.subject}
+                          </p>
                           <div className="flex items-center text-gray-500 text-sm">
                             <Calendar className="w-4 h-4 mr-1" />
                             Due: {assignment.dueDate}
@@ -248,8 +313,8 @@ export default function TeacherDashboard() {
                               assignment.status === "Active"
                                 ? "bg-green-100 border-green-300 text-green-700"
                                 : assignment.status === "Completed"
-                                  ? "bg-blue-100 border-blue-300 text-blue-700"
-                                  : "bg-yellow-100 border-yellow-300 text-yellow-700"
+                                ? "bg-blue-100 border-blue-300 text-blue-700"
+                                : "bg-yellow-100 border-yellow-300 text-yellow-700"
                             }`}
                           >
                             {assignment.status}
@@ -260,25 +325,35 @@ export default function TeacherDashboard() {
                           <div className="flex items-center justify-center space-x-1 mb-1">
                             <Users className="w-4 h-4 text-gray-600" />
                             <span className="font-black text-lg">
-                              {assignment.submittedCount}/{assignment.totalStudents}
+                              {assignment.submittedCount}/
+                              {assignment.totalStudents}
                             </span>
                           </div>
-                          <p className="text-xs font-semibold text-gray-500">Submitted</p>
+                          <p className="text-xs font-semibold text-gray-500">
+                            Submitted
+                          </p>
                         </div>
 
                         <div className="text-center">
                           <div className="flex items-center justify-center space-x-1 mb-1">
                             <BookOpen className="w-4 h-4 text-gray-600" />
                             <span className="font-black text-lg">
-                              {assignment.gradedCount}/{assignment.submittedCount}
+                              {assignment.gradedCount}/
+                              {assignment.submittedCount}
                             </span>
                           </div>
-                          <p className="text-xs font-semibold text-gray-500">Graded</p>
+                          <p className="text-xs font-semibold text-gray-500">
+                            Graded
+                          </p>
                         </div>
 
                         <div className="flex space-x-2">
                           <Button
-                            onClick={() => router.push(`/teacher/assignment/${assignment.id}`)}
+                            onClick={() =>
+                              router.push(
+                                `/teacher/assignment/${assignment.id}`
+                              )
+                            }
                             className="bg-green-500 text-white font-bold border-2 border-black text-xs px-3 py-2 rounded-lg hover:bg-green-600 transition-colors"
                           >
                             <Eye className="w-3 h-3 mr-1" />
@@ -303,5 +378,5 @@ export default function TeacherDashboard() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

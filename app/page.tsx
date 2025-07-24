@@ -134,13 +134,6 @@ export default function LoginPage() {
 
       console.log("SIGNUP RESPONSE ✅", response.data);
 
-      const extractedTeacherId = await axios.get(
-        `${process.env.NEXT_PUBLIC_TEACHER_DOMAIN!}/getTeacherId`,
-        {
-          params: { email: teacherSignupData.email },
-        }
-      );
-      // router.push(`${process.env.NEXT_PUBLIC_DOMAIN!}/teacher/${extractedTeacherId.data.teacherId}`);
       window.location.href = `${process.env.NEXT_PUBLIC_DOMAIN!}/dashboard`;
 
       setShowSignup(false); // Hide

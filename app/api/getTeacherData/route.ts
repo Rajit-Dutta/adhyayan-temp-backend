@@ -6,18 +6,26 @@ dbConnect();
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    await dbConnect();
+
+     const { searchParams } = new URL(request.url);
     const email = searchParams.get("email");
 
-    const extractedTeacherId = await teacherModel.findOne({ email });
-    if (!extractedTeacherId) {
+    if (!email) {
+      return new Response("Email issue", { status: 400 });
+    }
+
+    const teacherData = await teacherModel.findOne({ email });
+
+    if (!teacherData) {
       return new Response("Teacher not found", { status: 404 });
     }
-    return new Response(JSON.stringify({ teacherId: extractedTeacherId._id }), {
+    return new Response(JSON.stringify({teacherData}), {
       status: 200,
+      headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Error in GET /api/teacher/getTeacherId:", error);
+    console.error("Error in GET request:", error);
     return new Response("Internal Server Error", { status: 500 });
   }
 }
