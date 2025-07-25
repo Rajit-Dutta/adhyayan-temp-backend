@@ -12,7 +12,6 @@ export default function StaffDashboard() {
   const [activeTab, setActiveTab] = useState("students");
   const [admin, setAdmin] = useState(null);
 
-  // Update the useEffect to handle admin authentication
   useEffect(() => {
     fetchAdminData();
   }, [router]);
@@ -26,7 +25,11 @@ export default function StaffDashboard() {
         }
       );
 
+      console.log("User data:", userRes.data);
+
       const { userType, email } = userRes.data.jwtDecoded;
+
+      console.log(userType, email);
 
       if (userType !== "admin") {
         router.push("/");
@@ -34,13 +37,11 @@ export default function StaffDashboard() {
       }
 
       const adminRes = await axios.get(
-        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getTeacherData`,
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getAdminData`,
         {
           params: { email },
         }
       );
-
-      console.log(adminRes.data);
 
       const adminPayload = adminRes.data.teacherData;
       setAdmin(adminPayload); // Assuming this is the parsed object already
@@ -50,7 +51,6 @@ export default function StaffDashboard() {
       }
     } catch (error) {
       console.error("Error during admin dashboard data fetch:", error);
-      router.push("/");
     }
   };
 
