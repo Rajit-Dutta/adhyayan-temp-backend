@@ -61,7 +61,7 @@ export default function LoginPage() {
         error: "Log in unsuccessful! ❌.",
       });
       await signInPromise;
-      window.location.href = `${process.env.NEXT_PUBLIC_DOMAIN!}/staff/${
+      window.location.href = `${process.env.NEXT_PUBLIC_DOMAIN!}/admin/${
         response.data.id
       }`;
     } catch (error) {
@@ -175,7 +175,7 @@ export default function LoginPage() {
         success: "Sign up successful! ✅",
         error: "Sign up unsuccessful! ❌",
       });
-      window.location.href = `${process.env.NEXT_PUBLIC_DOMAIN!}/staff/${
+      window.location.href = `${process.env.NEXT_PUBLIC_DOMAIN!}/admin/${
         response.data.id
       }`;
     } catch (error) {

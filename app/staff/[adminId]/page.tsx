@@ -3,18 +3,23 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage } from "@/lib/firebase";
 import { ArrowLeft, Users, GraduationCap, FileText, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import { set } from "mongoose";
 
 export default function StaffDashboard() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("students");
   const [admin, setAdmin] = useState(null);
+  const [teacherNames, setTeacherNames] = useState<Array<{ _id: string; fullName: string }>>([]);
 
   useEffect(() => {
     fetchAdminData();
-  }, [router]);
+    fetchTeacherNames();
+  }, []);
 
   const fetchAdminData = async () => {
     try {
@@ -51,6 +56,36 @@ export default function StaffDashboard() {
       }
     } catch (error) {
       console.error("Error during admin dashboard data fetch:", error);
+    }
+  };
+
+  const fetchTeacherNames = async () => {
+  try {
+    const response = await axios.get(`${process.env.NEXT_PUBLIC_DOMAIN}/api/teacher/getTeacherNames`);
+    const dataWithDefault = [
+      { _id: "0", fullName: "Select Teacher" },
+      ...response.data,
+    ];
+
+    setTeacherNames(dataWithDefault);
+  } catch (error) {
+    console.error("Error fetching teacher names:", error);
+  }
+};
+
+
+  const uploadAssignment = async (file: any) => {
+    try {
+      const storageRef = ref(storage, `media/${Date.now()}_${file.name}`);
+      const snapshot = await uploadBytes(storageRef, file);
+
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      console.log("File available at:", downloadURL);
+
+      return downloadURL;
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      return null;
     }
   };
 
@@ -115,7 +150,7 @@ export default function StaffDashboard() {
 
         {activeTab === "students" && <StudentManager />}
         {activeTab === "teachers" && <TeacherManager />}
-        {activeTab === "questions" && <QuestionPaperManager />}
+        {activeTab === "questions" && <QuestionPaperManager teacherNames={teacherNames} />}
       </div>
     </div>
   );
@@ -454,7 +489,11 @@ function TeacherManager() {
   );
 }
 
-function QuestionPaperManager() {
+type QuestionPaperManagerProps = {
+  teacherNames: Array<{ _id: string; fullName: string }>;
+};
+
+function QuestionPaperManager({ teacherNames }: QuestionPaperManagerProps) {
   const [questionPapers] = useState([
     {
       id: 1,
@@ -522,30 +561,40 @@ function QuestionPaperManager() {
               GRADE
             </label>
             <select className="w-full p-2 border-4 border-black font-bold bg-gray-100 text-black">
+              <option>6th</option>
+              <option>7th</option>
+              <option>8th</option>
               <option>9th</option>
               <option>10th</option>
               <option>11th</option>
               <option>12th</option>
+              <option>Other</option>
             </select>
           </div>
           <div>
             <label className="block text-sm font-black text-black mb-1">
-              DIFFICULTY
+              ASSIGNED BY
             </label>
             <select className="w-full p-2 border-4 border-black font-bold bg-gray-100 text-black">
-              <option>Easy</option>
-              <option>Medium</option>
-              <option>Hard</option>
+              {
+                teacherNames.map((teacher) => {
+                  return (
+                    <option key={teacher._id} value={teacher.fullName}>
+                      {teacher.fullName}
+                    </option>
+                  );
+                })
+              }
             </select>
           </div>
           <div>
             <label className="block text-sm font-black text-black mb-1">
-              TOTAL QUESTIONS
+              TOTAL MARKS
             </label>
             <input
               type="number"
               className="w-full p-2 border-4 border-black font-bold bg-gray-100 text-black"
-              placeholder="Number of questions"
+              placeholder="Maximum marks"
             />
           </div>
           <div>
