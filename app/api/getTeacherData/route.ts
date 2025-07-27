@@ -6,20 +6,12 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect();
 
-     const { searchParams } = new URL(request.url);
-    const email = searchParams.get("email");
-    console.log(email);
+    const teacherData = await teacherModel.find({}, "fullName").lean();
 
-    if (!email) {
-      return new Response("Email issue", { status: 400 });
+    if (!teacherData || teacherData.length === 0) {
+      return new Response("No students found", { status: 404 });
     }
-
-    const teacherData = await teacherModel.findOne({ email });
-
-    if (!teacherData) {
-      return new Response("Teacher not found", { status: 404 });
-    }
-    return new Response(JSON.stringify({teacherData}), {
+    return new Response(JSON.stringify({ teacherData }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });

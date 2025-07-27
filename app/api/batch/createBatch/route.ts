@@ -5,7 +5,8 @@ import { NextRequest } from "next/server";
 export async function POST(request: NextRequest) {
   try {
     await dbConnect();
-    const { name, subject, standard, students, teacher } = await request.json();
+    const { name, subject, standard, teacher, status, students } =
+      await request.json();
 
     const existingBatch = await batchModel.findOne({ name, subject, standard });
     if (existingBatch) {
@@ -15,10 +16,12 @@ export async function POST(request: NextRequest) {
         name,
         subject,
         standard,
-        students,
         teacher,
+        status,
+        students,
       });
       const savedBatch = await newBatch.save();
+    
       return new Response(JSON.stringify(savedBatch), { status: 201 });
     }
   } catch (error) {

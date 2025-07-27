@@ -18,79 +18,10 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 
 // Mock data for batches
-const INITIAL_BATCHES = [
-  {
-    id: 1,
-    name: "Mathematics Advanced - 10A",
-    subject: "Mathematics",
-    standard: "10th",
-    section: "A",
-    teacher: "Dr. Rajesh Kumar",
-    students: [
-      { id: 1, name: "Aarav Sharma", rollNo: "2024001" },
-      { id: 2, name: "Priya Patel", rollNo: "2024002" },
-      { id: 4, name: "Kavya Reddy", rollNo: "2024004" },
-      { id: 5, name: "Rohit Kumar", rollNo: "2024005" },
-    ],
-    createdDate: "2024-01-15",
-    status: "Active",
-    description: "Advanced mathematics batch for high-performing students",
-  },
-  {
-    id: 2,
-    name: "Science Remedial - 9A",
-    subject: "Science",
-    standard: "9th",
-    section: "A",
-    teacher: "Prof. Sunita Sharma",
-    students: [
-      { id: 3, name: "Arjun Singh", rollNo: "2024003" },
-      { id: 6, name: "Sneha Gupta", rollNo: "2024006" },
-    ],
-    createdDate: "2024-01-12",
-    status: "Active",
-    description: "Remedial science batch for additional support",
-  },
-  {
-    id: 3,
-    name: "English Literature - 11A",
-    subject: "English",
-    standard: "11th",
-    section: "A",
-    teacher: "Ms. Kavita Singh",
-    students: [
-      { id: 7, name: "Vikram Joshi", rollNo: "2024007" },
-      { id: 8, name: "Ananya Das", rollNo: "2024008" },
-      { id: 9, name: "Karan Mehta", rollNo: "2024009" },
-    ],
-    createdDate: "2024-01-10",
-    status: "Active",
-    description: "Literature focused English batch",
-  },
-  {
-    id: 4,
-    name: "History Research - 12B",
-    subject: "History",
-    standard: "12th",
-    section: "B",
-    teacher: "Mr. Amit Verma",
-    students: [{ id: 10, name: "Riya Agarwal", rollNo: "2024010" }],
-    createdDate: "2024-01-08",
-    status: "Inactive",
-    description: "Research-oriented history batch",
-  },
-];
-
-const TEACHERS = [
-  "Dr. Rajesh Kumar",
-  "Prof. Sunita Sharma",
-  "Ms. Kavita Singh",
-  "Mr. Amit Verma",
-];
 
 export default function BatchesPage() {
   const router = useRouter();
-  const [batches, setBatches] = useState(INITIAL_BATCHES);
+  const [batches, setBatches] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStandard, setFilterStandard] = useState("");
   const [filterSubject, setFilterSubject] = useState("");
@@ -100,10 +31,20 @@ export default function BatchesPage() {
   const [selectedBatch, setSelectedBatch] = useState<any>(null);
   const [showViewModal, setShowViewModal] = useState(false);
   const [availableStudents, setAvailableStudents] = useState<any[]>([]);
+  const [displayedStudents, setDisplayedStudents] = useState<{
+    [key: string]: string;
+  }>({});
+
+  const [displayedTeacher, setDisplayedTeacher] = useState<{
+    [key: string]: string;
+  }>({});
+  const [teachers, setTeachers] = useState<any[]>([]);
 
   useEffect(() => {
     fetchAdminData();
     fetchStudentDetails();
+    fetchTeacherNames();
+    fetchBatchDetails();
   }, []);
 
   const fetchAdminData = async () => {
@@ -159,12 +100,85 @@ export default function BatchesPage() {
   const fetchStudentDetails = async () => {
     try {
       const response = await axios.get(
-        "http://localhost:3001/api/getStudentData"
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getStudentData`
       );
       setAvailableStudents(response.data);
     } catch (error) {
       console.error("Error in fetching student details", error);
       return new Response("Internal Server Error", { status: 500 });
+    }
+  };
+
+  const fetchTeacherNames = async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getTeacherData`
+      );
+      setTeachers(response.data.teacherData);
+    } catch (error) {
+      console.error("Error in fetching teacher details:", error);
+      return new Response("Internal Server Error", { status: 500 });
+    }
+  };
+
+  const fetchBatchDetails = async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/batch/getBatchData`
+      );
+      const batchData = response.data;
+      setBatches(batchData);
+      await fetchingTeacherAndStudentDisplayDetails(batchData);
+    } catch (error) {
+      console.error("Error in fetching batch details:", error);
+    }
+  };
+
+  const fetchingTeacherAndStudentDisplayDetails = async (batchData: any[]) => {
+    try {
+      // 🔹 Fetch teacher names
+      const teacherPromises = batchData.map((batch) =>
+        axios.get(
+          `${process.env.NEXT_PUBLIC_DOMAIN}/api/getTeacherDisplayData`,
+          {
+            params: { teacherId: batch.teacher },
+          }
+        )
+      );
+      const teacherResponses = await Promise.all(teacherPromises);
+      const teacherMap: { [key: string]: string } = {};
+      teacherResponses.forEach((res, i) => {
+        teacherMap[batchData[i].teacher] = res.data;
+      });
+      setDisplayedTeacher(teacherMap);
+
+      // 🔹 Gather all unique student IDs
+      const allStudentIds = [
+        ...new Set(
+          batchData.flatMap((batch) =>
+            batch.students.map((id: any) => String(id))
+          )
+        ),
+      ];
+
+      // 🔹 Fetch student name map
+      const studentRes = await axios.get(
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getStudentDisplayData`,
+        {
+          params: {
+            studentIds: allStudentIds,
+          },
+          paramsSerializer: (params) =>
+            params.studentIds.map((id: string) => `studentIds=${id}`).join("&"),
+        }
+      );
+
+      setDisplayedStudents(studentRes.data); // a map { studentId: "Name" }
+    } catch (error) {
+      console.error(
+        "Error in fetching teacher or student display details:",
+        error
+      );
     }
   };
 
@@ -181,9 +195,24 @@ export default function BatchesPage() {
     return matchesSearch && matchesStandard && matchesSubject && matchesStatus;
   });
 
-  const handleDeleteBatch = (batchId: number) => {
+  const handleDeleteBatch = async (batchId: number) => {
     if (confirm("Are you sure you want to delete this batch?")) {
-      setBatches(batches.filter((batch) => batch.id !== batchId));
+      try {
+        const response = await axios.delete(
+          `${process.env.NEXT_PUBLIC_DOMAIN}/api/batch/deleteBatch`,
+          {
+            params: { id: batchId },
+          }
+        );
+        console.log("Batch deleted successfully:", response.data);
+
+        setBatches((prevBatches) =>
+          prevBatches.filter((batch) => batch._id !== batchId)
+        );
+      } catch (error) {
+        console.error("Error deleting batch:", error);
+        return new Response("Internal Server Error", { status: 500 });
+      }
     }
   };
 
@@ -246,10 +275,10 @@ export default function BatchesPage() {
                   className="px-4 py-3 border-2 border-gray-300 rounded-xl font-semibold focus:border-green-500 focus:ring-0"
                 >
                   <option value="">All Standards</option>
-                  <option value="9th">9th Standard</option>
-                  <option value="10th">10th Standard</option>
-                  <option value="11th">11th Standard</option>
-                  <option value="12th">12th Standard</option>
+                  <option value="9th">9th</option>
+                  <option value="10th">10th</option>
+                  <option value="11th">11th</option>
+                  <option value="12th">12th</option>
                 </select>
                 <select
                   value={filterSubject}
@@ -330,7 +359,7 @@ export default function BatchesPage() {
             <div className="space-y-4">
               {filteredBatches.map((batch) => (
                 <Card
-                  key={batch.id}
+                  key={batch._id}
                   className="bg-gray-50 border-2 border-gray-200 rounded-xl hover:bg-gray-100 transition-colors"
                 >
                   <CardContent className="p-6">
@@ -340,7 +369,7 @@ export default function BatchesPage() {
                           {batch.name}
                         </h3>
                         <p className="font-semibold text-gray-600 mb-1">
-                          Teacher: {batch.teacher}
+                          Teacher: {displayedTeacher[batch.teacher] || "N/A"}
                         </p>
                         <p className="font-semibold text-green-600 text-sm">
                           {batch.description}
@@ -394,7 +423,7 @@ export default function BatchesPage() {
                           <Edit className="w-3 h-3" />
                         </Button>
                         <Button
-                          onClick={() => handleDeleteBatch(batch.id)}
+                          onClick={() => handleDeleteBatch(batch._id)}
                           className="bg-black text-white font-bold border-2 border-gray-300 text-xs px-2 py-2 rounded-lg hover:bg-gray-800 transition-colors"
                         >
                           <Trash2 className="w-3 h-3" />
@@ -417,6 +446,7 @@ export default function BatchesPage() {
               setShowCreateModal(false);
             }}
             availableStudents={availableStudents}
+            teachers={teachers}
           />
         )}
 
@@ -438,6 +468,7 @@ export default function BatchesPage() {
               setSelectedBatch(null);
             }}
             availableStudents={availableStudents}
+            teachers={teachers}
           />
         )}
 
@@ -449,6 +480,8 @@ export default function BatchesPage() {
               setShowViewModal(false);
               setSelectedBatch(null);
             }}
+            displayedTeacher={displayedTeacher}
+            displayedStudents={displayedStudents}
           />
         )}
       </div>
@@ -460,45 +493,57 @@ export default function BatchesPage() {
 function CreateBatchModal({
   onClose,
   onSave,
-  availableStudents
+  availableStudents,
+  teachers,
 }: {
   onClose: () => void;
   onSave: (batch: any) => void;
-  availableStudents:any
+  availableStudents: any;
+  teachers: any;
 }) {
   const [formData, setFormData] = useState({
     name: "",
     subject: "",
     standard: "",
-    section: "",
     teacher: "",
-    description: "",
     status: "Active",
-    students: [] as any[],
   });
 
   const [selectedStudents, setSelectedStudents] = useState<any[]>([]);
 
   const filteredStudents = availableStudents.filter(
-    (student:any) =>
+    (student: any) =>
       formData.standard === "" || student.standard === formData.standard
   );
 
   const handleStudentToggle = (student: any) => {
-    if (selectedStudents.find((s) => s.id === student.id)) {
-      setSelectedStudents(selectedStudents.filter((s) => s.id !== student.id));
+    if (selectedStudents.find((s: any) => s._id === student._id)) {
+      setSelectedStudents(
+        selectedStudents.filter((s: any) => s._id !== student._id)
+      );
     } else {
       setSelectedStudents([...selectedStudents, student]);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
+    const newBatch = {
       ...formData,
       students: selectedStudents,
       createdDate: new Date().toISOString().split("T")[0],
-    });
+    };
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/batch/createBatch`,
+        newBatch
+      );
+      console.log("Successfully created batch -> ", response.data);
+      onSave(newBatch);
+    } catch (error) {
+      console.error("Error in creating a batch:", error);
+      return new Response("Internal Server Error", { status: 500 });
+    }
   };
 
   return (
@@ -559,28 +604,10 @@ function CreateBatchModal({
                   required
                 >
                   <option value="">Select Standard</option>
-                  <option value="9th">9th Standard</option>
-                  <option value="10th">10th Standard</option>
-                  <option value="11th">11th Standard</option>
-                  <option value="12th">12th Standard</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-black mb-2">
-                  Section
-                </label>
-                <select
-                  value={formData.section}
-                  onChange={(e) =>
-                    setFormData({ ...formData, section: e.target.value })
-                  }
-                  className="w-full p-3 border-2 border-gray-300 rounded-xl font-semibold focus:border-green-500 focus:ring-0"
-                  required
-                >
-                  <option value="">Select Section</option>
-                  <option value="A">Section A</option>
-                  <option value="B">Section B</option>
-                  <option value="C">Section C</option>
+                  <option value="9th">9th</option>
+                  <option value="10th">10th</option>
+                  <option value="11th">11th</option>
+                  <option value="12th">12th</option>
                 </select>
               </div>
               <div>
@@ -596,9 +623,9 @@ function CreateBatchModal({
                   required
                 >
                   <option value="">Select Teacher</option>
-                  {TEACHERS.map((teacher) => (
-                    <option key={teacher} value={teacher}>
-                      {teacher}
+                  {teachers.map((teacher: any) => (
+                    <option key={teacher._id} value={teacher._id}>
+                      {teacher.fullName}
                     </option>
                   ))}
                 </select>
@@ -619,40 +646,27 @@ function CreateBatchModal({
                 </select>
               </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-bold text-black mb-2">
-                Description
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                className="w-full p-3 border-2 border-gray-300 rounded-xl font-semibold focus:border-green-500 focus:ring-0 h-24"
-                placeholder="Enter batch description"
-              />
-            </div>
-
             <div>
               <label className="block text-sm font-bold text-black mb-2">
                 Select Students ({selectedStudents.length} selected)
               </label>
               <div className="border-2 border-gray-300 rounded-xl p-4 max-h-60 overflow-y-auto">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {filteredStudents.map((student:any) => (
+                  {filteredStudents.map((student: any) => (
                     <div
-                      key={student.id}
+                      key={student._id}
                       onClick={() => handleStudentToggle(student)}
                       className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                        selectedStudents.find((s) => s.id === student.id)
+                        selectedStudents.find((s) => s._id === student._id)
                           ? "bg-green-100 border-green-500 text-green-700"
                           : "bg-gray-50 border-gray-300 hover:bg-gray-100"
                       }`}
                     >
-                      <div className="font-semibold">{student.name}</div>
+                      <div className="font-semibold">
+                        {student.firstName} {student.lastName}
+                      </div>
                       <div className="text-sm text-gray-600">
-                        {student.rollNo} - {student.standard} {student.section}
+                        {student.standard}
                       </div>
                     </div>
                   ))}
@@ -687,12 +701,14 @@ function EditBatchModal({
   batch,
   onClose,
   onSave,
-  availableStudents
+  availableStudents,
+  teachers,
 }: {
   batch: any;
   onClose: () => void;
   onSave: (batch: any) => void;
-  availableStudents:any
+  availableStudents: any;
+  teachers: any;
 }) {
   const [formData, setFormData] = useState({
     ...batch,
@@ -700,26 +716,38 @@ function EditBatchModal({
   const [selectedStudents, setSelectedStudents] = useState(batch.students);
 
   const filteredStudents = availableStudents.filter(
-    (student:any) =>
+    (student: any) =>
       formData.standard === "" || student.standard === formData.standard
   );
 
   const handleStudentToggle = (student: any) => {
-    if (selectedStudents.find((s: any) => s.id === student.id)) {
-      setSelectedStudents(
-        selectedStudents.filter((s: any) => s.id !== student.id)
+    if (selectedStudents.find((s: any) => s._id === student._id)) {
+      setSelectedStudents((prev: any) =>
+        prev.filter((s: any) => s._id !== student._id)
       );
     } else {
-      setSelectedStudents([...selectedStudents, student]);
+      setSelectedStudents((prev: any) => [...prev, student]);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
+    const updatedBatch = {
       ...formData,
       students: selectedStudents,
-    });
+      createdDate: new Date().toISOString().split("T")[0],
+    };
+    try {
+      const response = await axios.put(
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/batch/updateBatchData`,
+        updatedBatch
+      );
+      console.log("Successfully created batch -> ", response.data);
+      onSave(updatedBatch);
+    } catch (error) {
+      console.error("Error in creating a batch:", error);
+      return new Response("Internal Server Error", { status: 500 });
+    }
   };
 
   return (
@@ -777,27 +805,10 @@ function EditBatchModal({
                   className="w-full p-3 border-2 border-gray-300 rounded-xl font-semibold focus:border-green-500 focus:ring-0"
                   required
                 >
-                  <option value="9th">9th Standard</option>
-                  <option value="10th">10th Standard</option>
-                  <option value="11th">11th Standard</option>
-                  <option value="12th">12th Standard</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-black mb-2">
-                  Section
-                </label>
-                <select
-                  value={formData.section}
-                  onChange={(e) =>
-                    setFormData({ ...formData, section: e.target.value })
-                  }
-                  className="w-full p-3 border-2 border-gray-300 rounded-xl font-semibold focus:border-green-500 focus:ring-0"
-                  required
-                >
-                  <option value="A">Section A</option>
-                  <option value="B">Section B</option>
-                  <option value="C">Section C</option>
+                  <option value="9th">9th</option>
+                  <option value="10th">10th</option>
+                  <option value="11th">11th</option>
+                  <option value="12th">12th</option>
                 </select>
               </div>
               <div>
@@ -812,9 +823,9 @@ function EditBatchModal({
                   className="w-full p-3 border-2 border-gray-300 rounded-xl font-semibold focus:border-green-500 focus:ring-0"
                   required
                 >
-                  {TEACHERS.map((teacher) => (
-                    <option key={teacher} value={teacher}>
-                      {teacher}
+                  {teachers.map((teacher: any) => (
+                    <option key={teacher._id} value={teacher._id}>
+                      {teacher.fullName}
                     </option>
                   ))}
                 </select>
@@ -835,42 +846,36 @@ function EditBatchModal({
                 </select>
               </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-bold text-black mb-2">
-                Description
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                className="w-full p-3 border-2 border-gray-300 rounded-xl font-semibold focus:border-green-500 focus:ring-0 h-24"
-              />
-            </div>
-
             <div>
               <label className="block text-sm font-bold text-black mb-2">
                 Select Students ({selectedStudents.length} selected)
               </label>
               <div className="border-2 border-gray-300 rounded-xl p-4 max-h-60 overflow-y-auto">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {filteredStudents.map((student:any) => (
-                    <div
-                      key={student.id}
-                      onClick={() => handleStudentToggle(student)}
-                      className={`p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                        selectedStudents.find((s: any) => s.id === student.id)
-                          ? "bg-green-100 border-green-500 text-green-700"
-                          : "bg-gray-50 border-gray-300 hover:bg-gray-100"
-                      }`}
-                    >
-                      <div className="font-semibold">{student.name}</div>
-                      <div className="text-sm text-gray-600">
-                        {student.rollNo} - {student.standard} {student.section}
-                      </div>
-                    </div>
-                  ))}
+                  <div className="grid grid-cols-2 gap-2 mt-4">
+                    {filteredStudents.map((student: any) => {
+                      const isSelected = selectedStudents.some(
+                        (s: any) => s._id === student._id
+                      );
+
+                      return (
+                        <div
+                          key={student._id}
+                          onClick={() => handleStudentToggle(student)}
+                          className={`border rounded p-2 cursor-pointer transition ${
+                            isSelected ? "bg-green-200" : "bg-white"
+                          }`}
+                        >
+                          <div className="font-semibold">
+                            {student.firstName} {student.lastName}
+                          </div>
+                          <div className="text-sm text-gray-600">
+                            {student.standard}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
@@ -901,9 +906,13 @@ function EditBatchModal({
 function ViewBatchModal({
   batch,
   onClose,
+  displayedTeacher,
+  displayedStudents,
 }: {
   batch: any;
   onClose: () => void;
+  displayedTeacher: any;
+  displayedStudents: any;
 }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -916,7 +925,7 @@ function ViewBatchModal({
         <CardContent>
           <div className="space-y-6">
             {/* Batch Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
               <div className="bg-gray-50 p-4 rounded-xl border-2 border-gray-200">
                 <h3 className="font-black text-black mb-2">
                   Batch Information
@@ -939,7 +948,7 @@ function ViewBatchModal({
                   </p>
                   <p>
                     <span className="font-semibold">Teacher:</span>{" "}
-                    {batch.teacher}
+                    {displayedTeacher[batch.teacher] || "N/A"}
                   </p>
                   <p>
                     <span className="font-semibold">Status:</span>
@@ -959,10 +968,6 @@ function ViewBatchModal({
                   </p>
                 </div>
               </div>
-              <div className="bg-gray-50 p-4 rounded-xl border-2 border-gray-200">
-                <h3 className="font-black text-black mb-2">Description</h3>
-                <p className="text-gray-700">{batch.description}</p>
-              </div>
             </div>
 
             {/* Students List */}
@@ -971,18 +976,10 @@ function ViewBatchModal({
                 Students in Batch ({batch.students.length})
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {batch.students.map((student: any) => (
-                  <div
-                    key={student.id}
-                    className="bg-green-50 border-2 border-green-200 p-3 rounded-xl"
-                  >
-                    <div className="font-semibold text-green-700">
-                      {student.name}
-                    </div>
-                    <div className="text-sm text-green-600">
-                      Roll No: {student.rollNo}
-                    </div>
-                  </div>
+                {batch.students.map((studentId: any) => (
+                  <li key={studentId}>
+                    {displayedStudents[studentId] || "Loading..."}
+                  </li>
                 ))}
               </div>
             </div>
