@@ -126,6 +126,7 @@ export default function BatchesPage() {
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/batch/getBatchData`
       );
+      console.log(response.data);
       const batchData = response.data;
       setBatches(batchData);
       await fetchingTeacherAndStudentDisplayDetails(batchData);
@@ -469,6 +470,7 @@ export default function BatchesPage() {
             }}
             availableStudents={availableStudents}
             teachers={teachers}
+            batches={batches}
           />
         )}
 
@@ -703,26 +705,38 @@ function EditBatchModal({
   onSave,
   availableStudents,
   teachers,
+  batches,
 }: {
   batch: any;
   onClose: () => void;
   onSave: (batch: any) => void;
   availableStudents: any;
   teachers: any;
+  batches: any;
 }) {
   const [formData, setFormData] = useState({
     ...batch,
   });
-  const [selectedStudents, setSelectedStudents] = useState(batch.students);
+  const [selectedStudents, setSelectedStudents] = useState(
+    availableStudents.filter((s: any) => batch.students.includes(s._id))
+  );
 
+  useEffect(() => {
+    const hydratedStudents = availableStudents.filter((student: any) =>
+      batch.students.includes(student._id)
+    );
+    setSelectedStudents(hydratedStudents);
+  }, [availableStudents, batch]);
+  
   const filteredStudents = availableStudents.filter(
     (student: any) =>
       formData.standard === "" || student.standard === formData.standard
   );
+  const handleStudentToggleEdit = (student: any) => {
+    const isSelected = selectedStudents.some((s: any) => s._id === student._id);
 
-  const handleStudentToggle = (student: any) => {
-    if (selectedStudents.find((s: any) => s._id === student._id)) {
-      setSelectedStudents((prev: any) =>
+    if (isSelected) {
+      setSelectedStudents((prev: any[]) =>
         prev.filter((s: any) => s._id !== student._id)
       );
     } else {
@@ -851,8 +865,8 @@ function EditBatchModal({
                 Select Students ({selectedStudents.length} selected)
               </label>
               <div className="border-2 border-gray-300 rounded-xl p-4 max-h-60 overflow-y-auto">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <div className="grid grid-cols-2 gap-2 mt-4">
+                <div className="grid gap-2">
+                  <div className="flex px-2 mt-4">
                     {filteredStudents.map((student: any) => {
                       const isSelected = selectedStudents.some(
                         (s: any) => s._id === student._id
@@ -861,8 +875,8 @@ function EditBatchModal({
                       return (
                         <div
                           key={student._id}
-                          onClick={() => handleStudentToggle(student)}
-                          className={`border rounded p-2 cursor-pointer transition ${
+                          onClick={() => handleStudentToggleEdit(student)}
+                          className={`border w-2/3 rounded m-2 p-2 cursor-pointer transition ${
                             isSelected ? "bg-green-200" : "bg-white"
                           }`}
                         >
