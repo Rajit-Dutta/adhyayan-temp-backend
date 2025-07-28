@@ -470,7 +470,6 @@ export default function BatchesPage() {
             }}
             availableStudents={availableStudents}
             teachers={teachers}
-            batches={batches}
           />
         )}
 
@@ -705,14 +704,12 @@ function EditBatchModal({
   onSave,
   availableStudents,
   teachers,
-  batches,
 }: {
   batch: any;
   onClose: () => void;
   onSave: (batch: any) => void;
   availableStudents: any;
   teachers: any;
-  batches: any;
 }) {
   const [formData, setFormData] = useState({
     ...batch,
@@ -721,13 +718,6 @@ function EditBatchModal({
     availableStudents.filter((s: any) => batch.students.includes(s._id))
   );
 
-  useEffect(() => {
-    const hydratedStudents = availableStudents.filter((student: any) =>
-      batch.students.includes(student._id)
-    );
-    setSelectedStudents(hydratedStudents);
-  }, [availableStudents, batch]);
-  
   const filteredStudents = availableStudents.filter(
     (student: any) =>
       formData.standard === "" || student.standard === formData.standard
