@@ -3,8 +3,9 @@ import mongoose, { Schema } from "mongoose";
 const assignmentSchema = new Schema(
   {
     title: { type: String, required: true },
-    subject: {type:Schema.Types.ObjectId, ref: "Course", required: true },
-    assignedTo: [{ type: Schema.Types.ObjectId, ref: "Student", required: true }],
+    subject: { type: Schema.Types.ObjectId, ref: "Course", required: true },
+    grade: { type: Number, required: true },
+    assignedTo: [{ type: Schema.Types.ObjectId, ref: "Batch", required: true }],
     assignedBy: { type: Schema.Types.ObjectId, ref: "Teacher", required: true },
     totalMarks: { type: Number, required: true },
     questionPaperLink: { type: String, required: true },

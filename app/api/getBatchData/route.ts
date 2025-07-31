@@ -1,21 +1,19 @@
 import { dbConnect } from "@/lib/db";
-import teacherModel from "@/models/Teacher";
+import batchModel from "@/models/Batch";
 
 export async function GET() {
   try {
     await dbConnect();
-
-    const teacherData = await teacherModel.find({}, "fullName").lean();
-
-    if (!teacherData || teacherData.length === 0) {
+    const batchData = await batchModel.find({}, "name").lean();
+    if (!batchData || batchData.length === 0) {
       return new Response("No students found", { status: 404 });
     }
-    return new Response(JSON.stringify({ teacherData }), {
+    return new Response(JSON.stringify({ batchData }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("Error in GET request:", error);
+    console.error("Error in getting batch details: ", error);
     return new Response("Internal Server Error", { status: 500 });
   }
 }

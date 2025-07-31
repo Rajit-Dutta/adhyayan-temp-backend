@@ -1,72 +1,50 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, FileText, Plus, Search, Download, Eye, Filter } from "lucide-react"
-import { useRouter } from "next/navigation"
-import axios from "axios"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  ArrowLeft,
+  FileText,
+  Plus,
+  Search,
+  Download,
+  Eye,
+  Filter,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import axios from "axios";
 
 export default function QuestionPapersPage() {
-  const router = useRouter()
-  const [questionPapers, setQuestionPapers] = useState([
-    {
-      id: 1,
-      title: "Mathematics Mid-Term Exam",
-      subject: "Mathematics",
-      grade: "10th",
-      questions: 25,
-      difficulty: "Medium",
-      createdDate: "2024-01-10",
-      createdBy: "Dr. Rajesh Kumar",
-      status: "Published",
-      downloads: 45,
-    },
-    {
-      id: 2,
-      title: "Science Final Exam",
-      subject: "Science",
-      grade: "9th",
-      questions: 30,
-      difficulty: "Hard",
-      createdDate: "2024-01-08",
-      createdBy: "Prof. Sunita Sharma",
-      status: "Draft",
-      downloads: 12,
-    },
-    {
-      id: 3,
-      title: "English Grammar Test",
-      subject: "English",
-      grade: "11th",
-      questions: 20,
-      difficulty: "Easy",
-      createdDate: "2024-01-05",
-      createdBy: "Ms. Kavita Singh",
-      status: "Published",
-      downloads: 78,
-    },
-    {
-      id: 4,
-      title: "History Chapter Assessment",
-      subject: "History",
-      grade: "12th",
-      questions: 35,
-      difficulty: "Medium",
-      createdDate: "2024-01-03",
-      createdBy: "Mr. Amit Verma",
-      status: "Published",
-      downloads: 23,
-    },
-  ])
+  const router = useRouter();
+  type QuestionPaper = {
+    id?: number;
+    title: string;
+    subject: string;
+    grade: string;
+    questions: number;
+    createdDate: string;
+    createdBy: string;
+    status: string;
+    downloads: number;
+    assignedTo?: string[];
+    totalMarks?: number;
+    isSubmissionInClass?: boolean;
+    isSubmissionOpen?: boolean;
+    fileName?: string;
+    difficulty?: string;
+  };
 
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filterSubject, setFilterSubject] = useState("")
-  const [filterGrade, setFilterGrade] = useState("")
+  const [questionPapers, setQuestionPapers] = useState<QuestionPaper[]>([]);
 
-  const [showUploadModal, setShowUploadModal] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterSubject, setFilterSubject] = useState("");
+  const [filterGrade, setFilterGrade] = useState("");
+  const [teachers, setTeachers] = useState<any[]>([]);
+  const [batches, setBatches] = useState<any[]>([]);
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadFormData, setUploadFormData] = useState({
     title: "",
     assignedTo: [] as string[],
@@ -76,13 +54,13 @@ export default function QuestionPapersPage() {
     isSubmissionOpen: true,
     subject: "",
     grade: "",
-    difficulty: "Medium",
-    description: "",
-    file: null as File | null,
-  })
+    questionPaperLink: null as File | null,
+  });
 
   useEffect(() => {
     fetchAdminData();
+    fetchTeacherNames();
+    fetchBatchDetails();
   }, []);
 
   const fetchAdminData = async () => {
@@ -135,27 +113,39 @@ export default function QuestionPapersPage() {
     }
   };
 
+  const fetchTeacherNames = async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getTeacherData`
+      );
+      setTeachers(response.data.teacherData);
+    } catch (error) {
+      console.error("Error in fetching teacher details:", error);
+      return new Response("Internal Server Error", { status: 500 });
+    }
+  };
+
+  const fetchBatchDetails = async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getBatchData`
+      );
+      setBatches(response.data.batchData);
+    } catch (error) {
+      console.error("Error in fetching teacher details:", error);
+      return new Response("Internal Server Error", { status: 500 });
+    }
+  };
+
   const filteredPapers = questionPapers.filter((paper) => {
     const matchesSearch =
       paper.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      paper.createdBy.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesSubject = filterSubject === "" || paper.subject === filterSubject
-    const matchesGrade = filterGrade === "" || paper.grade === filterGrade
-    return matchesSearch && matchesSubject && matchesGrade
-  })
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case "Easy":
-        return "bg-green-100 border-green-300 text-green-700"
-      case "Medium":
-        return "bg-yellow-100 border-yellow-300 text-yellow-700"
-      case "Hard":
-        return "bg-red-100 border-red-300 text-red-700"
-      default:
-        return "bg-gray-100 border-gray-300 text-gray-700"
-    }
-  }
+      paper.createdBy.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSubject =
+      filterSubject === "" || paper.subject === filterSubject;
+    const matchesGrade = filterGrade === "" || paper.grade === filterGrade;
+    return matchesSearch && matchesSubject && matchesGrade;
+  });
 
   return (
     <div className="min-h-screen bg-black">
@@ -172,8 +162,12 @@ export default function QuestionPapersPage() {
                 Dashboard
               </Button>
               <div>
-                <h1 className="text-3xl font-black text-white">QUESTION PAPERS</h1>
-                <p className="text-lg font-bold text-green-100">Manage examination question papers and assessments</p>
+                <h1 className="text-3xl font-black text-white">
+                  QUESTION PAPERS
+                </h1>
+                <p className="text-lg font-bold text-green-100">
+                  Manage examination question papers and assessments
+                </p>
               </div>
             </div>
 
@@ -244,7 +238,9 @@ export default function QuestionPapersPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card className="bg-green-500 border-2 border-white rounded-xl p-6 text-center hover:bg-green-600 transition-colors">
             <FileText className="w-10 h-10 text-white mx-auto mb-3" />
-            <div className="text-4xl font-black text-white">{questionPapers.length}</div>
+            <div className="text-4xl font-black text-white">
+              {questionPapers.length}
+            </div>
             <div className="text-sm font-bold text-green-100">Total Papers</div>
           </Card>
           <Card className="bg-white border-2 border-green-500 rounded-xl p-6 text-center hover:bg-gray-50 transition-colors">
@@ -257,7 +253,9 @@ export default function QuestionPapersPage() {
             <div className="text-4xl font-black text-white">
               {questionPapers.reduce((sum, p) => sum + p.questions, 0)}
             </div>
-            <div className="text-sm font-bold text-green-100">Total Questions</div>
+            <div className="text-sm font-bold text-green-100">
+              Total Questions
+            </div>
           </Card>
           <Card className="bg-white border-2 border-green-500 rounded-xl p-6 text-center hover:bg-gray-50 transition-colors">
             <div className="text-4xl font-black text-black">
@@ -285,11 +283,15 @@ export default function QuestionPapersPage() {
                   <CardContent className="p-6">
                     <div className="grid grid-cols-1 lg:grid-cols-8 gap-4 items-center">
                       <div className="lg:col-span-2">
-                        <h3 className="text-xl font-black text-black mb-1">{paper.title}</h3>
+                        <h3 className="text-xl font-black text-black mb-1">
+                          {paper.title}
+                        </h3>
                         <p className="text-gray-600 font-bold text-sm mb-1">
                           {paper.subject} - {paper.grade}
                         </p>
-                        <p className="text-green-600 font-black text-sm">By: {paper.createdBy}</p>
+                        <p className="text-green-600 font-black text-sm">
+                          By: {paper.createdBy}
+                        </p>
                       </div>
                       <div className="text-center">
                         <span className="bg-white border-2 border-gray-300 text-gray-700 px-4 py-2 font-black text-sm rounded-xl">
@@ -297,14 +299,9 @@ export default function QuestionPapersPage() {
                         </span>
                       </div>
                       <div className="text-center">
-                        <span
-                          className={`px-4 py-2 border-2 font-black text-sm rounded-xl ${getDifficultyColor(paper.difficulty)}`}
-                        >
-                          {paper.difficulty}
-                        </span>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-gray-700 font-bold text-sm">{paper.createdDate}</p>
+                        <p className="text-gray-700 font-bold text-sm">
+                          {paper.createdDate}
+                        </p>
                       </div>
                       <div className="text-center">
                         <span
@@ -318,7 +315,9 @@ export default function QuestionPapersPage() {
                         </span>
                       </div>
                       <div className="text-center">
-                        <p className="text-green-600 font-black text-sm">{paper.downloads} downloads</p>
+                        <p className="text-green-600 font-black text-sm">
+                          {paper.downloads} downloads
+                        </p>
                       </div>
                       <div className="flex space-x-2">
                         <Button className="bg-green-500 hover:bg-green-600 text-white font-black border-2 border-black text-xs px-2 py-2 rounded-xl">
@@ -346,7 +345,7 @@ export default function QuestionPapersPage() {
         {showUploadModal && (
           <UploadPaperModal
             onClose={() => {
-              setShowUploadModal(false)
+              setShowUploadModal(false);
               setUploadFormData({
                 title: "",
                 assignedTo: [],
@@ -356,14 +355,15 @@ export default function QuestionPapersPage() {
                 isSubmissionOpen: true,
                 subject: "",
                 grade: "",
-                difficulty: "Medium",
-                description: "",
-                file: null,
-              })
+                questionPaperLink: null,
+              });
             }}
             onSave={(newPaper) => {
-              setQuestionPapers([...questionPapers, { ...newPaper, id: Date.now() }])
-              setShowUploadModal(false)
+              setQuestionPapers([
+                ...questionPapers,
+                { ...newPaper, id: Date.now() },
+              ]);
+              setShowUploadModal(false);
               setUploadFormData({
                 title: "",
                 assignedTo: [],
@@ -373,18 +373,18 @@ export default function QuestionPapersPage() {
                 isSubmissionOpen: true,
                 subject: "",
                 grade: "",
-                difficulty: "Medium",
-                description: "",
-                file: null,
-              })
+                questionPaperLink: null,
+              });
             }}
             formData={uploadFormData}
             setFormData={setUploadFormData}
+            teachers={teachers}
+            batches={batches}
           />
         )}
       </div>
     </div>
-  )
+  );
 }
 
 // Upload Paper Modal Component
@@ -393,59 +393,43 @@ function UploadPaperModal({
   onSave,
   formData,
   setFormData,
+  teachers,
+  batches,
 }: {
-  onClose: () => void
-  onSave: (paper: any) => void
-  formData: any
-  setFormData: (data: any) => void
+  onClose: () => void;
+  onSave: (paper: any) => void;
+  formData: any;
+  setFormData: (data: any) => void;
+  teachers: any;
+  batches: any;
 }) {
-  // Available batches and teachers for assignment
-  const availableBatches = [
-    "Mathematics Advanced - 10A",
-    "Science Remedial - 9A",
-    "English Literature - 11A",
-    "History Research - 12B",
-    "Physics Lab - 11B",
-    "Chemistry Practical - 12A",
-  ]
-
-  const availableTeachers = [
-    "Dr. Rajesh Kumar",
-    "Prof. Sunita Sharma",
-    "Ms. Kavita Singh",
-    "Mr. Amit Verma",
-    "Dr. Priya Patel",
-    "Prof. Vikram Singh",
-  ]
-
   const handleBatchToggle = (batch: string) => {
     if (formData.assignedTo.includes(batch)) {
       setFormData({
         ...formData,
         assignedTo: formData.assignedTo.filter((b: string) => b !== batch),
-      })
+      });
     } else {
       setFormData({
         ...formData,
         assignedTo: [...formData.assignedTo, batch],
-      })
+      });
     }
-  }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null
-    setFormData({ ...formData, file })
-  }
+    const file = e.target.files?.[0] || null;
+    setFormData({ ...formData, file });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     const newPaper = {
       title: formData.title,
       subject: formData.subject,
       grade: formData.grade,
-      questions: Math.floor(Math.random() * 30) + 10, // Random for demo
-      difficulty: formData.difficulty,
+      questions: Math.floor(Math.random() * 30) + 10,
       createdDate: new Date().toISOString().split("T")[0],
       createdBy: formData.assignedBy,
       status: formData.isSubmissionOpen ? "Published" : "Draft",
@@ -454,12 +438,11 @@ function UploadPaperModal({
       totalMarks: Number.parseInt(formData.totalMarks),
       isSubmissionInClass: formData.isSubmissionInClass,
       isSubmissionOpen: formData.isSubmissionOpen,
-      description: formData.description,
       fileName: formData.file?.name || "No file uploaded",
-    }
+    };
 
-    onSave(newPaper)
-  }
+    onSave(newPaper);
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -469,18 +452,24 @@ function UploadPaperModal({
             <Plus className="w-8 h-8 mr-4 text-green-600" />
             UPLOAD QUESTION PAPER
           </CardTitle>
-          <p className="text-gray-600 font-bold text-lg">Create and assign a new question paper</p>
+          <p className="text-gray-600 font-bold text-lg">
+            Create and assign a new question paper
+          </p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Basic Information */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div className="lg:col-span-2">
-                <label className="block text-sm font-black text-black mb-2">Paper Title *</label>
+                <label className="block text-sm font-black text-black mb-2">
+                  Paper Title *
+                </label>
                 <input
                   type="text"
                   value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, title: e.target.value })
+                  }
                   className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400"
                   placeholder="Enter question paper title"
                   required
@@ -488,10 +477,14 @@ function UploadPaperModal({
               </div>
 
               <div>
-                <label className="block text-sm font-black text-black mb-2">Subject *</label>
+                <label className="block text-sm font-black text-black mb-2">
+                  Subject *
+                </label>
                 <select
                   value={formData.subject}
-                  onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, subject: e.target.value })
+                  }
                   className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
                   required
                 >
@@ -507,62 +500,61 @@ function UploadPaperModal({
               </div>
 
               <div>
-                <label className="block text-sm font-black text-black mb-2">Grade *</label>
+                <label className="block text-sm font-black text-black mb-2">
+                  Grade *
+                </label>
                 <select
                   value={formData.grade}
-                  onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, grade: e.target.value })
+                  }
                   className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
                   required
                 >
                   <option value="">Select Grade</option>
-                  <option value="9th">9th Grade</option>
-                  <option value="10th">10th Grade</option>
-                  <option value="11th">11th Grade</option>
-                  <option value="12th">12th Grade</option>
+                  <option value="9th">9th</option>
+                  <option value="10th">10th</option>
+                  <option value="11th">11th</option>
+                  <option value="12th">12th</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-black text-black mb-2">Total Marks *</label>
+                <label className="block text-sm font-black text-black mb-2">
+                  Total Marks *
+                </label>
                 <input
                   type="number"
                   value={formData.totalMarks}
-                  onChange={(e) => setFormData({ ...formData, totalMarks: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, totalMarks: e.target.value })
+                  }
                   className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400"
                   placeholder="Enter total marks"
                   min="1"
                   required
                 />
               </div>
-
-              <div>
-                <label className="block text-sm font-black text-black mb-2">Difficulty Level</label>
-                <select
-                  value={formData.difficulty}
-                  onChange={(e) => setFormData({ ...formData, difficulty: e.target.value })}
-                  className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                >
-                  <option value="Easy">Easy</option>
-                  <option value="Medium">Medium</option>
-                  <option value="Hard">Hard</option>
-                </select>
-              </div>
             </div>
 
             {/* Assignment Information */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-black text-black mb-2">Assigned By *</label>
+                <label className="block text-sm font-black text-black mb-2">
+                  Assigned By *
+                </label>
                 <select
                   value={formData.assignedBy}
-                  onChange={(e) => setFormData({ ...formData, assignedBy: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, assignedBy: e.target.value })
+                  }
                   className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
                   required
                 >
                   <option value="">Select Teacher</option>
-                  {availableTeachers.map((teacher) => (
-                    <option key={teacher} value={teacher}>
-                      {teacher}
+                  {teachers.map((teacher: any) => (
+                    <option key={teacher._id} value={teacher._id}>
+                      {teacher.fullName}
                     </option>
                   ))}
                 </select>
@@ -574,9 +566,9 @@ function UploadPaperModal({
                 </label>
                 <div className="border-2 border-black rounded-xl p-4 max-h-32 overflow-y-auto bg-white">
                   <div className="space-y-2">
-                    {availableBatches.map((batch) => (
+                    {batches.map((batch: any) => (
                       <div
-                        key={batch}
+                        key={batch._id}
                         onClick={() => handleBatchToggle(batch)}
                         className={`p-3 border-2 rounded-lg cursor-pointer transition-all text-sm font-bold ${
                           formData.assignedTo.includes(batch)
@@ -584,7 +576,7 @@ function UploadPaperModal({
                             : "bg-gray-50 border-gray-300 hover:bg-gray-100"
                         }`}
                       >
-                        {batch}
+                        {batch.name}
                       </div>
                     ))}
                   </div>
@@ -594,17 +586,27 @@ function UploadPaperModal({
 
             {/* Submission Settings */}
             <div className="bg-gray-50 p-6 rounded-xl border-2 border-black">
-              <h3 className="text-xl font-black text-black mb-4">Submission Settings</h3>
+              <h3 className="text-xl font-black text-black mb-4">
+                Submission Settings
+              </h3>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="flex items-center space-x-3">
                   <input
                     type="checkbox"
                     id="isSubmissionInClass"
                     checked={formData.isSubmissionInClass}
-                    onChange={(e) => setFormData({ ...formData, isSubmissionInClass: e.target.checked })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        isSubmissionInClass: e.target.checked,
+                      })
+                    }
                     className="w-6 h-6 text-green-600 border-2 border-black rounded focus:ring-green-500"
                   />
-                  <label htmlFor="isSubmissionInClass" className="font-bold text-black">
+                  <label
+                    htmlFor="isSubmissionInClass"
+                    className="font-bold text-black"
+                  >
                     In-Class Submission Required
                   </label>
                 </div>
@@ -614,10 +616,18 @@ function UploadPaperModal({
                     type="checkbox"
                     id="isSubmissionOpen"
                     checked={formData.isSubmissionOpen}
-                    onChange={(e) => setFormData({ ...formData, isSubmissionOpen: e.target.checked })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        isSubmissionOpen: e.target.checked,
+                      })
+                    }
                     className="w-6 h-6 text-green-600 border-2 border-black rounded focus:ring-green-500"
                   />
-                  <label htmlFor="isSubmissionOpen" className="font-bold text-black">
+                  <label
+                    htmlFor="isSubmissionOpen"
+                    className="font-bold text-black"
+                  >
                     Submission Open
                   </label>
                 </div>
@@ -625,28 +635,21 @@ function UploadPaperModal({
 
               <div className="mt-4 text-sm font-semibold text-gray-600">
                 <p>
-                  <strong>In-Class Submission:</strong> Students must submit during class time
+                  <strong>In-Class Submission:</strong> Students must submit
+                  during class time
                 </p>
                 <p>
-                  <strong>Submission Open:</strong> Students can currently submit their answers
+                  <strong>Submission Open:</strong> Students can currently
+                  submit their answers
                 </p>
               </div>
             </div>
 
-            {/* Description */}
-            <div>
-              <label className="block text-sm font-black text-black mb-2">Description</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 h-24"
-                placeholder="Enter paper description or instructions"
-              />
-            </div>
-
             {/* File Upload */}
             <div>
-              <label className="block text-sm font-black text-black mb-2">Upload Question Paper File</label>
+              <label className="block text-sm font-black text-black mb-2">
+                Upload Question Paper File
+              </label>
               <div className="border-2 border-dashed border-black rounded-xl p-8 text-center hover:border-green-500 transition-colors bg-white">
                 <input
                   type="file"
@@ -659,9 +662,13 @@ function UploadPaperModal({
                   <div className="space-y-2">
                     <div className="text-6xl">📄</div>
                     <div className="font-black text-gray-700 text-lg">
-                      {formData.file ? formData.file.name : "Click to upload or drag and drop"}
+                      {formData.file
+                        ? formData.file.name
+                        : "Click to upload or drag and drop"}
                     </div>
-                    <div className="text-sm font-bold text-gray-500">PDF, DOC, DOCX, TXT up to 10MB</div>
+                    <div className="text-sm font-bold text-gray-500">
+                      PDF, DOC, DOCX, TXT up to 10MB
+                    </div>
                   </div>
                 </label>
               </div>
@@ -687,5 +694,5 @@ function UploadPaperModal({
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
