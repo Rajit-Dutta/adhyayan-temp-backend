@@ -564,11 +564,19 @@ function UploadPaperModal({
                 <label className="block text-sm font-black text-black mb-2">
                   Assigned To ({formData.assignedTo.length} selected)
                 </label>
-                <div className="border-2 border-black rounded-xl p-4 max-h-32 overflow-y-auto bg-white">
+                <select
+                  value={formData.assignedTo}
+                  onChange={(e) =>
+                    setFormData({ ...formData, assignedTo: e.target.value })
+                  }
+                  className="border-2 border-black rounded-xl p-4 max-h-32 overflow-y-auto bg-white"
+                  required
+                >
                   <div className="space-y-2">
                     {batches.map((batch: any) => (
-                      <div
+                      <option
                         key={batch._id}
+                        value={batch._id}
                         onClick={() => handleBatchToggle(batch)}
                         className={`p-3 border-2 rounded-lg cursor-pointer transition-all text-sm font-bold ${
                           formData.assignedTo.includes(batch)
@@ -577,10 +585,10 @@ function UploadPaperModal({
                         }`}
                       >
                         {batch.name}
-                      </div>
+                      </option>
                     ))}
                   </div>
-                </div>
+                </select>
               </div>
             </div>
 
