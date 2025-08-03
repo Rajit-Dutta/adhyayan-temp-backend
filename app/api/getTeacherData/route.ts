@@ -8,7 +8,7 @@ export async function GET() {
     const teacherData = await teacherModel.find({}, "fullName").lean();
 
     if (!teacherData || teacherData.length === 0) {
-      return new Response("No students found", { status: 404 });
+      return new Response("No teachers found", { status: 404 });
     }
     return new Response(JSON.stringify({ teacherData }), {
       status: 200,

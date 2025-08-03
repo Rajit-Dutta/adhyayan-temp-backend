@@ -20,47 +20,48 @@ import axios from "axios";
 export default function QuestionPapersPage() {
   const router = useRouter();
   type QuestionPaper = {
-    id?: number;
+    _id: number;
     title: string;
     subject: string;
     grade: string;
-    questions: number;
     createdDate: string;
     createdBy: string;
-    status: string;
-    downloads: number;
     assignedTo?: string[];
     totalMarks?: number;
     isSubmissionInClass?: boolean;
     isSubmissionOpen?: boolean;
-    fileName?: string;
-    difficulty?: string;
+    questionPaperLink?: string;
   };
 
   const [questionPapers, setQuestionPapers] = useState<QuestionPaper[]>([]);
-
   const [searchTerm, setSearchTerm] = useState("");
   const [filterSubject, setFilterSubject] = useState("");
   const [filterGrade, setFilterGrade] = useState("");
   const [teachers, setTeachers] = useState<any[]>([]);
   const [batches, setBatches] = useState<any[]>([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
+  const [showViewModal, setShowViewModal] = useState(false);
+  const [displayedStudents, setDisplayedStudents] = useState<{
+    [key: string]: string;
+  }>({});
   const [uploadFormData, setUploadFormData] = useState({
     title: "",
-    assignedTo: [] as string[],
-    assignedBy: "",
+    subject: "",
+    grade: "",
+    assignedTo: [], // array of batch IDs like ['6887a8d35ad88efee4b9c1f2']
+    assignedBy: "", // the admin ID (must be a stringified ObjectId)
     totalMarks: "",
     isSubmissionInClass: false,
     isSubmissionOpen: true,
-    subject: "",
-    grade: "",
-    questionPaperLink: null as File | null,
+    questionPaperLink: null,
   });
 
   useEffect(() => {
     fetchAdminData();
     fetchTeacherNames();
     fetchBatchDetails();
+    fetchQuestionPaperDetails();
   }, []);
 
   const fetchAdminData = async () => {
@@ -118,6 +119,7 @@ export default function QuestionPapersPage() {
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/getTeacherData`
       );
+      console.log("Teacher data -> ", response.data.teacherData);
       setTeachers(response.data.teacherData);
     } catch (error) {
       console.error("Error in fetching teacher details:", error);
@@ -130,6 +132,7 @@ export default function QuestionPapersPage() {
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/getBatchData`
       );
+      console.log("Batch data -> ", response.data.batchData);
       setBatches(response.data.batchData);
     } catch (error) {
       console.error("Error in fetching teacher details:", error);
@@ -137,15 +140,80 @@ export default function QuestionPapersPage() {
     }
   };
 
+  const fetchQuestionPaperDetails = async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/assignment/getAssignment`
+      );
+      console.log(response.data);
+      const assignmentData = response.data;
+      setQuestionPapers(assignmentData);
+    } catch (error) {
+      console.error("Error in fetching batch details:", error);
+    }
+  };
+
+  const fetchingTeacherAndStudentDisplayDetails = async (batchData: any[]) => {
+    try {
+      // 🔹 Fetch teacher names
+      const teacherPromises = batchData.map((batch) =>
+        axios.get(
+          `${process.env.NEXT_PUBLIC_DOMAIN}/api/getTeacherDisplayData`,
+          {
+            params: { teacherId: batch.teacher },
+          }
+        )
+      );
+      const teacherResponses = await Promise.all(teacherPromises);
+      const teacherMap: { [key: string]: string } = {};
+      teacherResponses.forEach((res, i) => {
+        teacherMap[batchData[i].teacher] = res.data;
+      });
+
+      // 🔹 Gather all unique student IDs
+      const allStudentIds = [
+        ...new Set(
+          batchData.flatMap((batch) =>
+            batch.students.map((id: any) => String(id))
+          )
+        ),
+      ];
+
+      // 🔹 Fetch student name map
+      const studentRes = await axios.get(
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getStudentDisplayData`,
+        {
+          params: {
+            studentIds: allStudentIds,
+          },
+          paramsSerializer: (params) =>
+            params.studentIds.map((id: string) => `studentIds=${id}`).join("&"),
+        }
+      );
+
+      setDisplayedStudents(studentRes.data); // a map { studentId: "Name" }
+    } catch (error) {
+      console.error(
+        "Error in fetching teacher or student display details:",
+        error
+      );
+    }
+  };
+
   const filteredPapers = questionPapers.filter((paper) => {
-    const matchesSearch =
-      paper.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      paper.createdBy.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesSubject =
-      filterSubject === "" || paper.subject === filterSubject;
-    const matchesGrade = filterGrade === "" || paper.grade === filterGrade;
+    const title = paper?.title?.toLowerCase() ?? "";
+    const createdBy = paper?.createdBy?.toLowerCase() ?? "";
+    const search = searchTerm.toLowerCase();
+    const matchesSearch = title.includes(search) || createdBy.includes(search);
+    const matchesSubject = !filterSubject || paper.subject === filterSubject;
+    const matchesGrade = !filterGrade || paper.grade === filterGrade;
     return matchesSearch && matchesSubject && matchesGrade;
   });
+
+  const handleViewBatch = (batch: any) => {
+    setSelectedAssignment(batch);
+    setShowViewModal(true);
+  };
 
   return (
     <div className="min-h-screen bg-black">
@@ -243,26 +311,6 @@ export default function QuestionPapersPage() {
             </div>
             <div className="text-sm font-bold text-green-100">Total Papers</div>
           </Card>
-          <Card className="bg-white border-2 border-green-500 rounded-xl p-6 text-center hover:bg-gray-50 transition-colors">
-            <div className="text-4xl font-black text-black">
-              {questionPapers.filter((p) => p.status === "Published").length}
-            </div>
-            <div className="text-sm font-bold text-gray-700">Published</div>
-          </Card>
-          <Card className="bg-green-500 border-2 border-white rounded-xl p-6 text-center hover:bg-green-600 transition-colors">
-            <div className="text-4xl font-black text-white">
-              {questionPapers.reduce((sum, p) => sum + p.questions, 0)}
-            </div>
-            <div className="text-sm font-bold text-green-100">
-              Total Questions
-            </div>
-          </Card>
-          <Card className="bg-white border-2 border-green-500 rounded-xl p-6 text-center hover:bg-gray-50 transition-colors">
-            <div className="text-4xl font-black text-black">
-              {questionPapers.reduce((sum, p) => sum + p.downloads, 0)}
-            </div>
-            <div className="text-sm font-bold text-gray-700">Downloads</div>
-          </Card>
         </div>
 
         {/* Question Papers List */}
@@ -277,7 +325,7 @@ export default function QuestionPapersPage() {
             <div className="space-y-6">
               {filteredPapers.map((paper) => (
                 <Card
-                  key={paper.id}
+                  key={paper._id}
                   className="bg-gray-50 border-2 border-gray-300 rounded-xl hover:bg-gray-100 transition-colors"
                 >
                   <CardContent className="p-6">
@@ -293,34 +341,17 @@ export default function QuestionPapersPage() {
                           By: {paper.createdBy}
                         </p>
                       </div>
-                      <div className="text-center">
-                        <span className="bg-white border-2 border-gray-300 text-gray-700 px-4 py-2 font-black text-sm rounded-xl">
-                          {paper.questions} Q's
-                        </span>
-                      </div>
+
                       <div className="text-center">
                         <p className="text-gray-700 font-bold text-sm">
                           {paper.createdDate}
                         </p>
                       </div>
-                      <div className="text-center">
-                        <span
-                          className={`px-4 py-2 border-2 font-black text-sm rounded-xl ${
-                            paper.status === "Published"
-                              ? "bg-green-100 border-green-300 text-green-700"
-                              : "bg-yellow-100 border-yellow-300 text-yellow-700"
-                          }`}
-                        >
-                          {paper.status}
-                        </span>
-                      </div>
-                      <div className="text-center">
-                        <p className="text-green-600 font-black text-sm">
-                          {paper.downloads} downloads
-                        </p>
-                      </div>
                       <div className="flex space-x-2">
-                        <Button className="bg-green-500 hover:bg-green-600 text-white font-black border-2 border-black text-xs px-2 py-2 rounded-xl">
+                        <Button
+                          onClick={() => handleViewBatch(paper)}
+                          className="bg-green-500 hover:bg-green-600 text-white font-black border-2 border-black text-xs px-2 py-2 rounded-xl"
+                        >
                           <Eye className="w-4 h-4" />
                         </Button>
                         <Button className="bg-white hover:bg-gray-100 text-black font-black border-2 border-black text-xs px-2 py-2 rounded-xl">
@@ -346,17 +377,6 @@ export default function QuestionPapersPage() {
           <UploadPaperModal
             onClose={() => {
               setShowUploadModal(false);
-              setUploadFormData({
-                title: "",
-                assignedTo: [],
-                assignedBy: "",
-                totalMarks: "",
-                isSubmissionInClass: false,
-                isSubmissionOpen: true,
-                subject: "",
-                grade: "",
-                questionPaperLink: null,
-              });
             }}
             onSave={(newPaper) => {
               setQuestionPapers([
@@ -364,22 +384,24 @@ export default function QuestionPapersPage() {
                 { ...newPaper, id: Date.now() },
               ]);
               setShowUploadModal(false);
-              setUploadFormData({
-                title: "",
-                assignedTo: [],
-                assignedBy: "",
-                totalMarks: "",
-                isSubmissionInClass: false,
-                isSubmissionOpen: true,
-                subject: "",
-                grade: "",
-                questionPaperLink: null,
-              });
             }}
             formData={uploadFormData}
             setFormData={setUploadFormData}
             teachers={teachers}
             batches={batches}
+          />
+        )}
+
+        {/* View Batch Modal */}
+        {showViewModal && selectedAssignment && (
+          <ViewBatchModal
+            assignment={selectedAssignment}
+            onClose={() => {
+              setShowViewModal(false);
+              setSelectedAssignment(null);
+            }}
+            // displayedTeacher={displayedTeacher}
+            displayedStudents={displayedStudents}
           />
         )}
       </div>
@@ -418,30 +440,45 @@ function UploadPaperModal({
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    setFormData({ ...formData, file });
+    const questionPaperLink = e.target.files?.[0] || null;
+    setFormData({ ...formData, questionPaperLink });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const newPaper = {
-      title: formData.title,
-      subject: formData.subject,
-      grade: formData.grade,
-      questions: Math.floor(Math.random() * 30) + 10,
-      createdDate: new Date().toISOString().split("T")[0],
-      createdBy: formData.assignedBy,
-      status: formData.isSubmissionOpen ? "Published" : "Draft",
-      downloads: 0,
-      assignedTo: formData.assignedTo,
-      totalMarks: Number.parseInt(formData.totalMarks),
-      isSubmissionInClass: formData.isSubmissionInClass,
-      isSubmissionOpen: formData.isSubmissionOpen,
-      fileName: formData.file?.name || "No file uploaded",
-    };
+    if (!formData.questionPaperLink) {
+      alert("Please select a file.");
+      return;
+    }
 
-    onSave(newPaper);
+    const newAssignment = new FormData();
+
+    newAssignment.append("title", formData.title);
+    newAssignment.append("subject", formData.subject);
+    newAssignment.append("grade", formData.grade);
+    newAssignment.append("createdDate", new Date().toISOString().split("T")[0]);
+    newAssignment.append("assignedTo", JSON.stringify(formData.assignedTo));
+    newAssignment.append("assignedBy", formData.assignedBy);
+    newAssignment.append("totalMarks", formData.totalMarks);
+    newAssignment.append("isSubmissionInClass", formData.isSubmissionInClass);
+    newAssignment.append("isSubmissionOpen", formData.isSubmissionOpen);
+    newAssignment.append(
+      "questionPaperLink",
+      formData.questionPaperLink as File
+    );
+
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/assignment/createAssignment`,
+        newAssignment
+      );
+      console.log("Successfully created assignment -> ", response.data);
+      onSave(newAssignment);
+    } catch (error) {
+      console.error("Error in creating an assignment:", error);
+      return new Response("Internal Server Error", { status: 500 });
+    }
   };
 
   return (
@@ -560,36 +597,34 @@ function UploadPaperModal({
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-black text-black mb-2">
-                  Assigned To ({formData.assignedTo.length} selected)
-                </label>
-                <select
-                  value={formData.assignedTo}
-                  onChange={(e) =>
-                    setFormData({ ...formData, assignedTo: e.target.value })
-                  }
-                  className="border-2 border-black rounded-xl p-4 max-h-32 overflow-y-auto bg-white"
-                  required
-                >
-                  <div className="space-y-2">
-                    {batches.map((batch: any) => (
-                      <option
-                        key={batch._id}
-                        value={batch._id}
-                        onClick={() => handleBatchToggle(batch)}
-                        className={`p-3 border-2 rounded-lg cursor-pointer transition-all text-sm font-bold ${
-                          formData.assignedTo.includes(batch)
-                            ? "bg-green-100 border-green-500 text-green-700"
-                            : "bg-gray-50 border-gray-300 hover:bg-gray-100"
-                        }`}
-                      >
-                        {batch.name}
-                      </option>
-                    ))}
-                  </div>
-                </select>
-              </div>
+              <select
+                multiple
+                value={formData.assignedTo}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    assignedTo: Array.from(e.target.selectedOptions).map(
+                      (option) => option.value
+                    ),
+                  })
+                }
+                className="border-2 border-black rounded-xl p-4 max-h-32 overflow-y-auto bg-white"
+              >
+                {batches.map((batch: any) => (
+                  <option
+                    key={batch._id}
+                    value={batch._id}
+                    onClick={() => handleBatchToggle(batch)}
+                    className={`p-3 border-2 rounded-lg cursor-pointer transition-all text-sm font-bold ${
+                      formData.assignedTo.includes(batch)
+                        ? "bg-green-100 border-green-500 text-green-700"
+                        : "bg-gray-50 border-gray-300 hover:bg-gray-100"
+                    }`}
+                  >
+                    {batch.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Submission Settings */}
@@ -670,8 +705,8 @@ function UploadPaperModal({
                   <div className="space-y-2">
                     <div className="text-6xl">📄</div>
                     <div className="font-black text-gray-700 text-lg">
-                      {formData.file
-                        ? formData.file.name
+                      {formData.questionPaperLink
+                        ? formData.questionPaperLink.name
                         : "Click to upload or drag and drop"}
                     </div>
                     <div className="text-sm font-bold text-gray-500">
@@ -699,6 +734,92 @@ function UploadPaperModal({
               </Button>
             </div>
           </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ViewBatchModal({
+  assignment,
+  onClose,
+  displayedStudents,
+}: // displayedTeacher,
+{
+  assignment: any;
+  onClose: () => void;
+  // displayedTeacher: any;
+  displayedStudents: any;
+}) {
+  console.log(assignment);
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <Card className="bg-white border-2 border-green-500 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+        <CardHeader>
+          <CardTitle className="text-2xl font-black text-black">
+            BATCH DETAILS
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {/* Batch Info */}
+            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+              <div className="bg-gray-50 p-4 rounded-xl border-2 border-gray-200">
+                <h3 className="font-black text-black mb-2">
+                  Batch Information
+                </h3>
+                <div className="space-y-2">
+                  <p>
+                    <span className="font-semibold">Title:</span>{" "}
+                    {assignment.title}
+                  </p>
+                  <p>
+                    <span className="font-semibold">Subject:</span>{" "}
+                    {assignment.subject}
+                  </p>
+                  <p>
+                    <span className="font-semibold">Standard:</span>{" "}
+                    {assignment.grade}
+                  </p>
+                  <p>
+                    <span className="font-semibold">Total Marks:</span>{" "}
+                    {assignment.totalMarks}
+                  </p>
+                  <p>
+                    <span className="font-semibold">Teacher:</span>{" "}
+                    {assignment.assignedBy}
+                  </p>
+                  <p>
+                    <span className="font-semibold">Created:</span>{" "}
+                    {assignment.createdDate}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Assignment List */}
+            <div>
+              <h3 className="font-black text-black mb-4">
+                Students in Batch ({assignment.assignedTo.length})
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {assignment.assignedTo.map((batch: any, id:any) => (
+                  <li key={batch}>
+                    {assignment.assignedTo[id] || "Loading..."}
+                  </li>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <Button
+                onClick={onClose}
+                className="bg-gray-500 hover:bg-gray-600 text-white font-bold border-2 border-black rounded-xl px-8"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
