@@ -73,8 +73,6 @@ export default function QuestionPapersPage() {
         }
       );
 
-      console.log("User data:", userRes.data);
-
       const { userType, email } = userRes.data.jwtDecoded;
 
       if (userType !== "admin") {
@@ -119,7 +117,6 @@ export default function QuestionPapersPage() {
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/getTeacherData`
       );
-      console.log("Teacher data -> ", response.data.teacherData);
       setTeachers(response.data.teacherData);
     } catch (error) {
       console.error("Error in fetching teacher details:", error);
@@ -132,7 +129,6 @@ export default function QuestionPapersPage() {
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/getBatchData`
       );
-      console.log("Batch data -> ", response.data.batchData);
       setBatches(response.data.batchData);
     } catch (error) {
       console.error("Error in fetching teacher details:", error);
@@ -145,7 +141,6 @@ export default function QuestionPapersPage() {
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/assignment/getAssignment`
       );
-      console.log(response.data);
       const assignmentData = response.data;
       setQuestionPapers(assignmentData);
     } catch (error) {
@@ -379,10 +374,7 @@ export default function QuestionPapersPage() {
               setShowUploadModal(false);
             }}
             onSave={(newPaper) => {
-              setQuestionPapers([
-                ...questionPapers,
-                { ...newPaper, id: Date.now() },
-              ]);
+              setQuestionPapers([...questionPapers, newPaper]); // ✅ no temp id
               setShowUploadModal(false);
             }}
             formData={uploadFormData}
@@ -427,11 +419,13 @@ function UploadPaperModal({
 }) {
   const handleBatchToggle = (batch: string) => {
     if (formData.assignedTo.includes(batch)) {
+      console.log("Inside formData includes");
       setFormData({
         ...formData,
         assignedTo: formData.assignedTo.filter((b: string) => b !== batch),
       });
     } else {
+      console.log("Inside formData not includes");
       setFormData({
         ...formData,
         assignedTo: [...formData.assignedTo, batch],
@@ -474,7 +468,7 @@ function UploadPaperModal({
         newAssignment
       );
       console.log("Successfully created assignment -> ", response.data);
-      onSave(newAssignment);
+      onSave(response.data);
     } catch (error) {
       console.error("Error in creating an assignment:", error);
       return new Response("Internal Server Error", { status: 500 });
@@ -803,7 +797,7 @@ function ViewBatchModal({
                 Students in Batch ({assignment.assignedTo.length})
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {assignment.assignedTo.map((batch: any, id:any) => (
+                {assignment.assignedTo.map((batch: any, id: any) => (
                   <li key={batch}>
                     {assignment.assignedTo[id] || "Loading..."}
                   </li>

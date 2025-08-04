@@ -61,10 +61,21 @@ export async function POST(req: NextRequest) {
       isSubmissionOpen,
     });
 
-    await newAssignment.save();
+    const savedAssignment = await newAssignment.save();
 
     return NextResponse.json(
-      { message: "Uploaded successfully", url: result.secure_url },
+      {
+        _id: savedAssignment._id,
+        title,
+        subject,
+        grade,
+        assignedTo,
+        assignedBy,
+        totalMarks,
+        questionPaperLink: result.secure_url,
+        isSubmissionInClass,
+        isSubmissionOpen,
+      },
       { status: 200 }
     );
   } catch (error) {
