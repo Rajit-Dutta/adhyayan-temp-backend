@@ -129,6 +129,7 @@ export default function QuestionPapersPage() {
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/getBatchData`
       );
+      console.log("Inside batches -> ", response.data);
       setBatches(response.data.batchData);
     } catch (error) {
       console.error("Error in fetching teacher details:", error);
@@ -418,6 +419,8 @@ function UploadPaperModal({
   batches: any;
 }) {
   const handleBatchToggle = (batch: string) => {
+    console.log("Initial formData -> ", formData.assignedTo);
+    console.log(batch);
     if (formData.assignedTo.includes(batch)) {
       console.log("Inside formData includes");
       setFormData({
@@ -593,15 +596,6 @@ function UploadPaperModal({
 
               <select
                 multiple
-                value={formData.assignedTo}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    assignedTo: Array.from(e.target.selectedOptions).map(
-                      (option) => option.value
-                    ),
-                  })
-                }
                 className="border-2 border-black rounded-xl p-4 max-h-32 overflow-y-auto bg-white"
               >
                 {batches.map((batch: any) => (
