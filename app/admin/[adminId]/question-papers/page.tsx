@@ -758,7 +758,7 @@ function ViewBatchModal({
         <CardContent>
           <div className="space-y-6">
             {/* Batch Info */}
-            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-gray-50 p-4 rounded-xl border-2 border-gray-200">
                 <h3 className="font-black text-black mb-2">
                   Batch Information
@@ -790,6 +790,16 @@ function ViewBatchModal({
                   </p>
                 </div>
               </div>
+              <div className="bg-gray-50 p-4 rounded-xl border-2 border-gray-200 text-wrap">
+                <h3 className="font-black text-black mb-2">View question</h3>
+                <button
+                  onClick={() =>
+                    (window.location.href = `${assignment.questionPaperLink}`)
+                  }
+                >
+                  Click here
+                </button>
+              </div>
             </div>
 
             {/* Assignment List */}
@@ -798,15 +808,17 @@ function ViewBatchModal({
                 Students in Batch ({assignment.assignedTo.length})
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {assignment.assignedTo.map((a: any, i: any) => (
-                  <li key={a}>
-                    {
-                      displayedBatches.batchData.find(
-                        (batch: any) => batch._id === a
-                      ).name
-                    }
-                  </li>
-                ))}
+                {Array.isArray(displayedBatches.batchData) &&
+                  assignment.assignedTo.map((a: any) => {
+                    const batch = displayedBatches.batchData.find(
+                      (batch: any) => batch._id === a
+                    );
+                    return (
+                      <li key={a}>
+                        {batch ? batch.name : "Batch info not available (please refresh)"}
+                      </li>
+                    );
+                  })}
               </div>
             </div>
 

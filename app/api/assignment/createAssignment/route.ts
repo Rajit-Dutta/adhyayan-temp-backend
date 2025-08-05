@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       cloudinary.uploader
         .upload_stream(
           {
-            resource_type: "raw",
+            resource_type: file.type === "application/pdf" ? "image" : "auto",
             folder: "question-bank",
             public_id: Date.now().toString(),
           },
