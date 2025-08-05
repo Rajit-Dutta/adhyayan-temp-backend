@@ -42,7 +42,10 @@ export default function QuestionPapersPage() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
   const [showViewModal, setShowViewModal] = useState(false);
-  const [displayedStudents, setDisplayedStudents] = useState<{
+  const [displayedBatches, setDisplayedBatches] = useState<{
+    [key: string]: string;
+  }>({});
+  const [displayedTeacher, setDisplayedTeacher] = useState<{
     [key: string]: string;
   }>({});
   const [uploadFormData, setUploadFormData] = useState({
@@ -144,53 +147,58 @@ export default function QuestionPapersPage() {
       );
       const assignmentData = response.data;
       setQuestionPapers(assignmentData);
+      await fetchingTeacherAndBatchDisplayDetails(assignmentData);
     } catch (error) {
-      console.error("Error in fetching batch details:", error);
+      console.error("Error in fetching assignment details:", error);
     }
   };
 
-  const fetchingTeacherAndStudentDisplayDetails = async (batchData: any[]) => {
+  const fetchingTeacherAndBatchDisplayDetails = async (
+    assignmentData: any[]
+  ) => {
+    console.log(assignmentData);
     try {
       // 🔹 Fetch teacher names
-      const teacherPromises = batchData.map((batch) =>
+      const teacherPromises = assignmentData.map((assignment) =>
         axios.get(
           `${process.env.NEXT_PUBLIC_DOMAIN}/api/getTeacherDisplayData`,
           {
-            params: { teacherId: batch.teacher },
+            params: { teacherId: assignment.assignedBy },
           }
         )
       );
       const teacherResponses = await Promise.all(teacherPromises);
       const teacherMap: { [key: string]: string } = {};
       teacherResponses.forEach((res, i) => {
-        teacherMap[batchData[i].teacher] = res.data;
+        teacherMap[assignmentData[i].assignedBy] = res.data;
       });
+      setDisplayedTeacher(teacherMap);
 
-      // 🔹 Gather all unique student IDs
-      const allStudentIds = [
+      // 🔹 Gather all unique batch IDs
+      const allBatchIds = [
         ...new Set(
-          batchData.flatMap((batch) =>
-            batch.students.map((id: any) => String(id))
+          assignmentData.flatMap((assignment) =>
+            assignment.assignedTo.map((id: any) => String(id))
           )
         ),
       ];
 
       // 🔹 Fetch student name map
-      const studentRes = await axios.get(
-        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getStudentDisplayData`,
+      const batchRes = await axios.get(
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getBatchData`,
         {
           params: {
-            studentIds: allStudentIds,
+            batchIds: allBatchIds,
           },
           paramsSerializer: (params) =>
-            params.studentIds.map((id: string) => `studentIds=${id}`).join("&"),
+            params.batchIds.map((id: string) => `batchIds=${id}`).join("&"),
         }
       );
 
-      setDisplayedStudents(studentRes.data); // a map { studentId: "Name" }
+      setDisplayedBatches(batchRes.data); // a map { studentId: "Name" }
     } catch (error) {
       console.error(
-        "Error in fetching teacher or student display details:",
+        "Error in fetching teacher or batch display details:",
         error
       );
     }
@@ -334,7 +342,7 @@ export default function QuestionPapersPage() {
                           {paper.subject} - {paper.grade}
                         </p>
                         <p className="text-green-600 font-black text-sm">
-                          By: {paper.createdBy}
+                          {/* By: {paper.assignedBy} */}
                         </p>
                       </div>
 
@@ -393,8 +401,8 @@ export default function QuestionPapersPage() {
               setShowViewModal(false);
               setSelectedAssignment(null);
             }}
-            // displayedTeacher={displayedTeacher}
-            displayedStudents={displayedStudents}
+            displayedTeacher={displayedTeacher}
+            displayedBatches={displayedBatches}
           />
         )}
       </div>
@@ -731,15 +739,14 @@ function UploadPaperModal({
 function ViewBatchModal({
   assignment,
   onClose,
-  displayedStudents,
-}: // displayedTeacher,
-{
+  displayedBatches,
+  displayedTeacher,
+}: {
   assignment: any;
   onClose: () => void;
-  // displayedTeacher: any;
-  displayedStudents: any;
+  displayedTeacher: any;
+  displayedBatches: any;
 }) {
-  console.log(assignment);
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <Card className="bg-white border-2 border-green-500 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
@@ -775,11 +782,11 @@ function ViewBatchModal({
                   </p>
                   <p>
                     <span className="font-semibold">Teacher:</span>{" "}
-                    {assignment.assignedBy}
+                    {displayedTeacher[assignment.assignedBy] || "NA"}
                   </p>
                   <p>
                     <span className="font-semibold">Created:</span>{" "}
-                    {assignment.createdDate}
+                    {assignment.createdAt}
                   </p>
                 </div>
               </div>
@@ -791,9 +798,13 @@ function ViewBatchModal({
                 Students in Batch ({assignment.assignedTo.length})
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {assignment.assignedTo.map((batch: any, id: any) => (
-                  <li key={batch}>
-                    {assignment.assignedTo[id] || "Loading..."}
+                {assignment.assignedTo.map((a: any, i: any) => (
+                  <li key={a}>
+                    {
+                      displayedBatches.batchData.find(
+                        (batch: any) => batch._id === a
+                      ).name
+                    }
                   </li>
                 ))}
               </div>
