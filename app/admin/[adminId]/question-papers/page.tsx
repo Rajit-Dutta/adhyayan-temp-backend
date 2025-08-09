@@ -42,12 +42,14 @@ export default function QuestionPapersPage() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [displayedBatches, setDisplayedBatches] = useState<{
     [key: string]: string;
   }>({});
   const [displayedTeacher, setDisplayedTeacher] = useState<{
     [key: string]: string;
   }>({});
+  const [fileUpload, setFileUpload] = useState(null);
   const [uploadFormData, setUploadFormData] = useState({
     title: "",
     subject: "",
@@ -132,7 +134,6 @@ export default function QuestionPapersPage() {
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/getBatchData`
       );
-      console.log("Inside batches -> ", response.data);
       setBatches(response.data.batchData);
     } catch (error) {
       console.error("Error in fetching teacher details:", error);
@@ -156,7 +157,6 @@ export default function QuestionPapersPage() {
   const fetchingTeacherAndBatchDisplayDetails = async (
     assignmentData: any[]
   ) => {
-    console.log(assignmentData);
     try {
       // 🔹 Fetch teacher names
       const teacherPromises = assignmentData.map((assignment) =>
@@ -217,6 +217,11 @@ export default function QuestionPapersPage() {
   const handleViewBatch = (batch: any) => {
     setSelectedAssignment(batch);
     setShowViewModal(true);
+  };
+
+  const handleEditBatch = (batch: any) => {
+    setSelectedAssignment(batch);
+    setShowEditModal(true);
   };
 
   return (
@@ -361,7 +366,10 @@ export default function QuestionPapersPage() {
                         <Button className="bg-white hover:bg-gray-100 text-black font-black border-2 border-black text-xs px-2 py-2 rounded-xl">
                           <Download className="w-4 h-4" />
                         </Button>
-                        <Button className="bg-white hover:bg-gray-100 text-black font-black border-2 border-black text-xs px-2 py-2 rounded-xl">
+                        <Button
+                          onClick={() => handleEditBatch(paper)}
+                          className="bg-white hover:bg-gray-100 text-black font-black border-2 border-black text-xs px-2 py-2 rounded-xl"
+                        >
                           Edit
                         </Button>
                         <Button className="bg-black hover:bg-gray-800 text-white font-black border-2 border-gray-300 text-xs px-2 py-2 rounded-xl">
@@ -393,9 +401,31 @@ export default function QuestionPapersPage() {
           />
         )}
 
+        {/* Edit Batch Modal */}
+        {showEditModal && selectedAssignment && (
+          <EditPaperModal
+            assignment={selectedAssignment}
+            onClose={() => {
+              setShowEditModal(false);
+              setSelectedAssignment(null);
+            }}
+            onSave={(updatedBatch) => {
+              setBatches(
+                batches.map((b) =>
+                  b.id === updatedBatch.id ? updatedBatch : b
+                )
+              );
+              setShowEditModal(false);
+              setSelectedAssignment(null);
+            }}
+            teachers={teachers}
+            availableBatches={displayedBatches}
+          />
+        )}
+
         {/* View Batch Modal */}
         {showViewModal && selectedAssignment && (
-          <ViewBatchModal
+          <ViewPaperModal
             assignment={selectedAssignment}
             onClose={() => {
               setShowViewModal(false);
@@ -736,7 +766,344 @@ function UploadPaperModal({
   );
 }
 
-function ViewBatchModal({
+function EditPaperModal({
+  assignment,
+  onClose,
+  onSave,
+  availableBatches,
+  teachers,
+}: {
+  assignment: any;
+  onClose: () => void;
+  onSave: (batch: any) => void;
+  availableBatches: any;
+  teachers: any;
+}) {
+  const [formData, setFormData] = useState({
+    ...assignment,
+  });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const questionPaperLink = e.target.files?.[0] || null;
+    setFormData({ ...formData, questionPaperLink });
+  };
+
+  const [selectedBatches, setSelectedBatches] = useState(
+    availableBatches.batchData.filter((b: any) =>
+      assignment.assignedTo.includes(b._id)
+    )
+  );
+
+  console.log("formData -> ", formData);
+
+  const filteredBatches = availableBatches.batchData.filter(
+    (batch: any) => formData.grade === "" || batch.standard === formData.grade
+  );
+
+  console.log("Available batches -> ", availableBatches);
+  console.log("Filtered batches -> ", filteredBatches);
+
+  const handleBatchToggleEdit = (batch: any) => {
+    const isSelected = selectedBatches.some((b: any) => b._id === batch._id);
+
+    if (isSelected) {
+      setSelectedBatches((prev: any[]) =>
+        prev.filter((s: any) => s._id !== batch._id)
+      );
+    } else {
+      setSelectedBatches((prev: any) => [...prev, batch]);
+    }
+  };
+  console.log("Selected Batch -> ", selectedBatches);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const updateAssignment = new FormData();
+    updateAssignment.append("title", formData.title);
+    updateAssignment.append("subject", formData.subject);
+    updateAssignment.append("grade", formData.grade);
+    updateAssignment.append(
+      "createdDate",
+      new Date().toISOString().split("T")[0]
+    );
+    updateAssignment.append("assignedTo", JSON.stringify(selectedBatches));
+    updateAssignment.append("assignedBy", formData.assignedBy);
+    updateAssignment.append("totalMarks", formData.totalMarks);
+    updateAssignment.append(
+      "isSubmissionInClass",
+      formData.isSubmissionInClass
+    );
+    updateAssignment.append("isSubmissionOpen", formData.isSubmissionOpen);
+    updateAssignment.append(
+      "questionPaperLink",
+      formData.questionPaperLink as File
+    );
+    try {
+      const response = await axios.put(
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/assignment/updateAssignment`,
+        updateAssignment
+      );
+      console.log("Successfully created assignment -> ", response.data);
+      onSave(updateAssignment);
+    } catch (error) {
+      console.error("Error in updating an assignment:", error);
+      return new Response("Internal Server Error", { status: 500 });
+    }
+  };
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <Card className="bg-white border-2 border-green-500 rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+        <CardHeader>
+          <CardTitle className="text-3xl font-black text-black flex items-center">
+            <Plus className="w-8 h-8 mr-4 text-green-600" />
+            EDIT QUESTION PAPER
+          </CardTitle>
+          <p className="text-gray-600 font-bold text-lg">
+            Edit your question paper
+          </p>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Basic Information */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="lg:col-span-2">
+                <label className="block text-sm font-black text-black mb-2">
+                  Paper Title *
+                </label>
+                <input
+                  type="text"
+                  className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400"
+                  placeholder="Enter question paper title"
+                  required
+                  defaultValue={formData.title}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-black text-black mb-2">
+                  Subject *
+                </label>
+                <select
+                  value={formData.subject}
+                  onChange={(e) =>
+                    setFormData({ ...formData, subject: e.target.value })
+                  }
+                  className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                  required
+                >
+                  <option value="">Select Subject</option>
+                  <option value="Mathematics">Mathematics</option>
+                  <option value="Science">Science</option>
+                  <option value="English">English</option>
+                  <option value="History">History</option>
+                  <option value="Physics">Physics</option>
+                  <option value="Chemistry">Chemistry</option>
+                  <option value="Biology">Biology</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-black text-black mb-2">
+                  Grade *
+                </label>
+                <select
+                  value={formData.grade}
+                  onChange={(e) =>
+                    setFormData({ ...formData, grade: e.target.value })
+                  }
+                  className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                  required
+                >
+                  <option value="">Select Grade</option>
+                  <option value="9th">9th</option>
+                  <option value="10th">10th</option>
+                  <option value="11th">11th</option>
+                  <option value="12th">12th</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-black text-black mb-2">
+                  Total Marks *
+                </label>
+                <input
+                  type="number"
+                  value={formData.totalMarks}
+                  onChange={(e) =>
+                    setFormData({ ...formData, totalMarks: e.target.value })
+                  }
+                  className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400"
+                  placeholder="Enter total marks"
+                  min="1"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Assignment Information */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-black text-black mb-2">
+                  Assigned By *
+                </label>
+                <select
+                  value={formData.assignedBy}
+                  onChange={(e) =>
+                    setFormData({ ...formData, assignedBy: e.target.value })
+                  }
+                  className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                  required
+                >
+                  <option value="">Select Teacher</option>
+                  {teachers.map((teacher: any) => (
+                    <option key={teacher._id} value={teacher._id}>
+                      {teacher.fullName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="border-2 border-black rounded-xl p-4 max-h-32 overflow-y-auto bg-white">
+                {filteredBatches.map((batch: any) => {
+                  const isSelected = selectedBatches.some(
+                    (b: any) => b._id === batch._id
+                  );
+
+                  return (
+                    <div
+                      key={batch._id}
+                      onClick={() => handleBatchToggleEdit(batch)}
+                      className={`border w-1/4 rounded m-2 p-2 cursor-pointer transition ${
+                        isSelected ? "bg-green-200" : "bg-white"
+                      }`}
+                    >
+                      <div className="font-semibold">{batch.name}</div>
+                      <div className="text-sm text-gray-600">
+                        {batch.standard}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Submission Settings */}
+            <div className="bg-gray-50 p-6 rounded-xl border-2 border-black">
+              <h3 className="text-xl font-black text-black mb-4">
+                Submission Settings
+              </h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    id="isSubmissionInClass"
+                    checked={formData.isSubmissionInClass}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        isSubmissionInClass: e.target.checked,
+                      })
+                    }
+                    className="w-6 h-6 text-green-600 border-2 border-black rounded focus:ring-green-500"
+                  />
+                  <label
+                    htmlFor="isSubmissionInClass"
+                    className="font-bold text-black"
+                  >
+                    In-Class Submission Required
+                  </label>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <input
+                    type="checkbox"
+                    id="isSubmissionOpen"
+                    checked={formData.isSubmissionOpen}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        isSubmissionOpen: e.target.checked,
+                      })
+                    }
+                    className="w-6 h-6 text-green-600 border-2 border-black rounded focus:ring-green-500"
+                  />
+                  <label
+                    htmlFor="isSubmissionOpen"
+                    className="font-bold text-black"
+                  >
+                    Submission Open
+                  </label>
+                </div>
+              </div>
+
+              <div className="mt-4 text-sm font-semibold text-gray-600">
+                <p>
+                  <strong>In-Class Submission:</strong> Students must submit
+                  during class time
+                </p>
+                <p>
+                  <strong>Submission Open:</strong> Students can currently
+                  submit their answers
+                </p>
+              </div>
+            </div>
+
+            {/* File Upload */}
+            <div>
+              <label className="block text-sm font-black text-black mb-2">
+                Upload Question Paper File
+              </label>
+              <div className="border-2 border-dashed border-black rounded-xl p-8 text-center hover:border-green-500 transition-colors bg-white">
+                <input
+                  type="file"
+                  onChange={handleFileChange}
+                  accept=".pdf,.doc,.docx,.txt"
+                  className="hidden"
+                  id="file-upload"
+                />
+                <label htmlFor="file-upload" className="cursor-pointer">
+                  <div className="space-y-2">
+                    <div className="text-6xl">📄</div>
+                    <div className="font-black text-gray-700 text-lg">
+                      {formData.questionPaperLink
+                        ? formData.questionPaperLink.name
+                          ? formData.questionPaperLink.name
+                          : formData.questionPaperLink.split("/").pop()
+                        : "Click to upload or drag and drop"}
+                    </div>
+                    <div className="text-sm font-bold text-gray-500">
+                      PDF, DOC, DOCX, TXT up to 10MB
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex space-x-4 pt-4">
+              <Button
+                type="submit"
+                className="bg-green-500 hover:bg-green-600 text-white font-black border-2 border-black rounded-xl px-8 py-4"
+              >
+                Upload Paper
+              </Button>
+              <Button
+                type="button"
+                onClick={onClose}
+                className="bg-black hover:bg-gray-800 text-white font-black border-2 border-gray-300 rounded-xl px-8 py-4"
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ViewPaperModal({
   assignment,
   onClose,
   displayedBatches,
@@ -752,7 +1119,7 @@ function ViewBatchModal({
       <Card className="bg-white border-2 border-green-500 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
         <CardHeader>
           <CardTitle className="text-2xl font-black text-black">
-            BATCH DETAILS
+            ASSIGNMENT DETAILS
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -761,7 +1128,7 @@ function ViewBatchModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-gray-50 p-4 rounded-xl border-2 border-gray-200">
                 <h3 className="font-black text-black mb-2">
-                  Batch Information
+                  Assignment Information
                 </h3>
                 <div className="space-y-2">
                   <p>
@@ -792,13 +1159,16 @@ function ViewBatchModal({
               </div>
               <div className="bg-gray-50 p-4 rounded-xl border-2 border-gray-200 text-wrap">
                 <h3 className="font-black text-black mb-2">View question</h3>
-                <button
+                {/* <button
                   onClick={() =>
                     (window.location.href = `${assignment.questionPaperLink}`)
                   }
                 >
                   Click here
-                </button>
+                </button> */}
+                <img
+                  src={assignment.questionPaperLink+".jpg"}
+                />
               </div>
             </div>
 
@@ -815,7 +1185,9 @@ function ViewBatchModal({
                     );
                     return (
                       <li key={a}>
-                        {batch ? batch.name : "Batch info not available (please refresh)"}
+                        {batch
+                          ? batch.name
+                          : "Batch info not available (please refresh)"}
                       </li>
                     );
                   })}

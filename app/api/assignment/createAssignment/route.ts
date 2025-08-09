@@ -2,6 +2,7 @@ import cloudinary from "@/lib/config";
 import { dbConnect } from "@/lib/db";
 import assignmentModel from "@/models/Assignment";
 import { NextRequest, NextResponse } from "next/server";
+import path from "path";
 
 export const config = {
   api: {
@@ -13,6 +14,7 @@ export async function POST(req: NextRequest) {
   const formData = await req.formData();
 
   const title = formData.get("title") as string;
+  console.log(title);
   const subject = formData.get("subject") as string;
   const grade = formData.get("grade") as string;
   const assignedBy = formData.get("assignedBy") as string;
@@ -26,46 +28,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
   }
 
-  const buffer = Buffer.from(await file.arrayBuffer());
+  const existingAssignment = await assignmentModel.findOne({ title });
+  if (existingAssignment) {
+    return new Response("Assignment already exists", { status: 409 });
+  } else {
+    const fileNameWithoutExtension = path.parse(file.name).name;
+    const buffer = Buffer.from(await file.arrayBuffer());
+    await dbConnect();
 
-  await dbConnect();
+    try {
+      const uploadResult = await new Promise((resolve, reject) => {
+        cloudinary.uploader
+          .upload_stream(
+            {
+              resource_type: file.type === "application/pdf" ? "image" : "auto",
+              folder: "question-bank",
+              public_id: fileNameWithoutExtension,
+              use_filename: true,
+              unique_filename: true,
+            },
+            (error, result) => {
+              if (error) return reject(error);
+              resolve(result);
+            }
+          )
+          .end(buffer);
+      });
 
-  try {
-    const uploadResult = await new Promise((resolve, reject) => {
-      cloudinary.uploader
-        .upload_stream(
-          {
-            resource_type: file.type === "application/pdf" ? "image" : "auto",
-            folder: "question-bank",
-            public_id: Date.now().toString(),
-          },
-          (error, result) => {
-            if (error) return reject(error);
-            resolve(result);
-          }
-        )
-        .end(buffer);
-    });
+      const result = uploadResult as any;
 
-    const result = uploadResult as any;
-
-    const newAssignment = new assignmentModel({
-      title,
-      subject,
-      grade,
-      assignedTo,
-      assignedBy,
-      totalMarks,
-      questionPaperLink: result.secure_url,
-      isSubmissionInClass,
-      isSubmissionOpen,
-    });
-
-    const savedAssignment = await newAssignment.save();
-
-    return NextResponse.json(
-      {
-        _id: savedAssignment._id,
+      const newAssignment = new assignmentModel({
         title,
         subject,
         grade,
@@ -75,11 +67,28 @@ export async function POST(req: NextRequest) {
         questionPaperLink: result.secure_url,
         isSubmissionInClass,
         isSubmissionOpen,
-      },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error("Upload failed", error);
-    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+      });
+
+      const savedAssignment = await newAssignment.save();
+
+      return NextResponse.json(
+        {
+          _id: savedAssignment._id,
+          title,
+          subject,
+          grade,
+          assignedTo,
+          assignedBy,
+          totalMarks,
+          questionPaperLink: result.secure_url,
+          isSubmissionInClass,
+          isSubmissionOpen,
+        },
+        { status: 200 }
+      );
+    } catch (error) {
+      console.error("Upload failed", error);
+      return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+    }
   }
 }
