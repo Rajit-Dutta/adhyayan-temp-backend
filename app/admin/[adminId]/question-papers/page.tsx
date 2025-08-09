@@ -49,7 +49,6 @@ export default function QuestionPapersPage() {
   const [displayedTeacher, setDisplayedTeacher] = useState<{
     [key: string]: string;
   }>({});
-  const [fileUpload, setFileUpload] = useState(null);
   const [uploadFormData, setUploadFormData] = useState({
     title: "",
     subject: "",
@@ -214,14 +213,35 @@ export default function QuestionPapersPage() {
     return matchesSearch && matchesSubject && matchesGrade;
   });
 
-  const handleViewBatch = (batch: any) => {
+  const handleViewAssignment = (batch: any) => {
     setSelectedAssignment(batch);
     setShowViewModal(true);
   };
 
-  const handleEditBatch = (batch: any) => {
+  const handleEditAssignment = (batch: any) => {
     setSelectedAssignment(batch);
     setShowEditModal(true);
+  };
+
+  const handleDeleteBatch = async (assignmentId: number) => {
+    if (confirm("Are you sure you want to delete this assignment?")) {
+      try {
+        const response = await axios.delete(
+          `${process.env.NEXT_PUBLIC_DOMAIN}/api/assignment/deleteAssignment`,
+          {
+            params: { id: assignmentId },
+          }
+        );
+        console.log("Assignment deleted successfully:", response.data);
+
+        setQuestionPapers((prevAssgn) =>
+          prevAssgn.filter((assignment) => assignment._id !== assignmentId)
+        );
+      } catch (error) {
+        console.error("Error deleting batch:", error);
+        return new Response("Internal Server Error", { status: 500 });
+      }
+    }
   };
 
   return (
@@ -358,7 +378,7 @@ export default function QuestionPapersPage() {
                       </div>
                       <div className="flex space-x-2">
                         <Button
-                          onClick={() => handleViewBatch(paper)}
+                          onClick={() => handleViewAssignment(paper)}
                           className="bg-green-500 hover:bg-green-600 text-white font-black border-2 border-black text-xs px-2 py-2 rounded-xl"
                         >
                           <Eye className="w-4 h-4" />
@@ -367,12 +387,15 @@ export default function QuestionPapersPage() {
                           <Download className="w-4 h-4" />
                         </Button>
                         <Button
-                          onClick={() => handleEditBatch(paper)}
+                          onClick={() => handleEditAssignment(paper)}
                           className="bg-white hover:bg-gray-100 text-black font-black border-2 border-black text-xs px-2 py-2 rounded-xl"
                         >
                           Edit
                         </Button>
-                        <Button className="bg-black hover:bg-gray-800 text-white font-black border-2 border-gray-300 text-xs px-2 py-2 rounded-xl">
+                        <Button
+                          onClick={() => handleDeleteBatch(paper._id)}
+                          className="bg-black hover:bg-gray-800 text-white font-black border-2 border-gray-300 text-xs px-2 py-2 rounded-xl"
+                        >
                           Delete
                         </Button>
                       </div>
@@ -1166,9 +1189,7 @@ function ViewPaperModal({
                 >
                   Click here
                 </button> */}
-                <img
-                  src={assignment.questionPaperLink+".jpg"}
-                />
+                <img src={assignment.questionPaperLink + ".jpg"} />
               </div>
             </div>
 
