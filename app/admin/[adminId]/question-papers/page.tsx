@@ -13,6 +13,8 @@ import {
   Download,
   Eye,
   Filter,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
@@ -24,8 +26,8 @@ export default function QuestionPapersPage() {
     title: string;
     subject: string;
     grade: string;
-    createdDate: string;
-    createdBy: string;
+    createdAt: string;
+    assignedBy: string;
     assignedTo?: string[];
     totalMarks?: number;
     isSubmissionInClass?: boolean;
@@ -37,6 +39,7 @@ export default function QuestionPapersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterSubject, setFilterSubject] = useState("");
   const [filterGrade, setFilterGrade] = useState("");
+  const [filterTeacher, setFilterTeacher] = useState("");
   const [teachers, setTeachers] = useState<any[]>([]);
   const [batches, setBatches] = useState<any[]>([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -205,12 +208,13 @@ export default function QuestionPapersPage() {
 
   const filteredPapers = questionPapers.filter((paper) => {
     const title = paper?.title?.toLowerCase() ?? "";
-    const createdBy = paper?.createdBy?.toLowerCase() ?? "";
+    const assignedBy = paper?.assignedBy?.toLowerCase() ?? "";
     const search = searchTerm.toLowerCase();
-    const matchesSearch = title.includes(search) || createdBy.includes(search);
+    const matchesSearch = title.includes(search) || assignedBy.includes(search);
+    const matchesTeacher = !filterTeacher || paper.assignedBy === filterTeacher;
     const matchesSubject = !filterSubject || paper.subject === filterSubject;
     const matchesGrade = !filterGrade || paper.grade === filterGrade;
-    return matchesSearch && matchesSubject && matchesGrade;
+    return matchesSearch && matchesSubject && matchesGrade && matchesTeacher;
   });
 
   const handleViewAssignment = (batch: any) => {
@@ -294,7 +298,7 @@ export default function QuestionPapersPage() {
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-600" />
                 <input
                   type="text"
-                  placeholder="Search question papers by title or creator..."
+                  placeholder="Search question papers by name"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-12 pr-4 py-4 border-2 border-black rounded-xl font-bold text-black placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-green-400"
@@ -315,17 +319,39 @@ export default function QuestionPapersPage() {
                     <option value="History">History</option>
                   </select>
                 </div>
-                <select
-                  value={filterGrade}
-                  onChange={(e) => setFilterGrade(e.target.value)}
-                  className="px-4 py-4 border-2 border-black rounded-xl font-bold text-black focus:outline-none focus:ring-2 focus:ring-green-400 appearance-none bg-white"
-                >
-                  <option value="">All Grades</option>
-                  <option value="9th">9th Grade</option>
-                  <option value="10th">10th Grade</option>
-                  <option value="11th">11th Grade</option>
-                  <option value="12th">12th Grade</option>
-                </select>
+                <div className="flex gap-4">
+                  <div className="relative">
+                    <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-600" />
+                    <select
+                      value={filterTeacher}
+                      onChange={(e) => setFilterTeacher(e.target.value)}
+                      className="pl-12 pr-8 py-4 border-2 border-black rounded-xl font-bold text-black focus:outline-none focus:ring-2 focus:ring-green-400 appearance-none bg-white"
+                    >
+                      <option value="">All teachers</option>
+                      {teachers.map((teacher: any) => (
+                        <option key={teacher._id} value={teacher._id}>
+                          {teacher.fullName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="relative">
+                    <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-600" />
+                    <select
+                      value={filterGrade}
+                      onChange={(e) => setFilterGrade(e.target.value)}
+                      className="pl-12 pr-8 py-4 border-2 border-black rounded-xl font-bold text-black focus:outline-none focus:ring-2 focus:ring-green-400 appearance-none bg-white"
+                    >
+                      <option value="">All Grades</option>
+                      <option value="9th">9th Grade</option>
+                      <option value="10th">10th Grade</option>
+                      <option value="11th">11th Grade</option>
+                      <option value="12th">12th Grade</option>
+                    </select>
+                  </div>
+                </div>
               </div>
             </div>
           </CardContent>
@@ -350,53 +376,82 @@ export default function QuestionPapersPage() {
               Question Paper Bank ({filteredPapers.length} papers)
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
+          <CardContent className="">
+            <div className="space-y-4">
               {filteredPapers.map((paper) => (
                 <Card
                   key={paper._id}
-                  className="bg-gray-50 border-2 border-gray-300 rounded-xl hover:bg-gray-100 transition-colors"
+                  className="bg-gray-50 border-2 border-gray-200 rounded-xl hover:bg-gray-100 transition-colors"
                 >
-                  <CardContent className="p-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-8 gap-4 items-center">
+                  <CardContent className="flex justify-between p-3">
+                    <div className="grid grid-cols-2 lg:grid-cols-8 items-center">
                       <div className="lg:col-span-2">
                         <h3 className="text-xl font-black text-black mb-1">
                           {paper.title}
                         </h3>
-                        <p className="text-gray-600 font-bold text-sm mb-1">
-                          {paper.subject} - {paper.grade}
-                        </p>
-                        <p className="text-green-600 font-black text-sm">
-                          {/* By: {paper.assignedBy} */}
+                        <p className="font-semibold text-gray-600 mb-1">
+                          Teacher: {displayedTeacher[paper.assignedBy]}
                         </p>
                       </div>
-
                       <div className="text-center">
-                        <p className="text-gray-700 font-bold text-sm">
-                          {paper.createdDate}
+                        <span className="bg-green-100 border-2 border-green-300 text-green-700 px-3 py-1 font-black text-sm rounded-lg">
+                          {paper.subject}
+                        </span>
+                      </div>
+                      <div className="text-center">
+                        <span className="bg-white border-2 border-gray-300 text-gray-700 px-3 py-1 font-black text-sm rounded-lg">
+                          {paper.subject} - {paper.grade}
+                        </span>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-black text-green-600">
+                          {paper.assignedTo?.length}
+                        </div>
+                        <div className="text-sm font-semibold text-gray-600">
+                          Batch{paper.assignedTo?.length === 1 ? "" : "es"}
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <span
+                          className={`px-3 py-1 border-2 font-bold text-sm rounded-lg ${
+                            paper.isSubmissionOpen === true
+                              ? "bg-green-100 border-green-300 text-green-700"
+                              : "bg-red-100 border-red-300 text-red-700"
+                          }`}
+                        >
+                          {paper.isSubmissionOpen ? "Open" : "Closed"}
+                        </span>
+                      </div>
+                      <div className="text-center">
+                        <p className="font-semibold text-gray-700 text-sm">
+                          {
+                            new Date(paper.createdAt)
+                              .toISOString()
+                              .split("T")[0]
+                          }
                         </p>
                       </div>
-                      <div className="flex space-x-2">
+                      <div className="flex">
                         <Button
                           onClick={() => handleViewAssignment(paper)}
                           className="bg-green-500 hover:bg-green-600 text-white font-black border-2 border-black text-xs px-2 py-2 rounded-xl"
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-3 h-3" />
                         </Button>
                         <Button className="bg-white hover:bg-gray-100 text-black font-black border-2 border-black text-xs px-2 py-2 rounded-xl">
                           <Download className="w-4 h-4" />
                         </Button>
                         <Button
                           onClick={() => handleEditAssignment(paper)}
-                          className="bg-white hover:bg-gray-100 text-black font-black border-2 border-black text-xs px-2 py-2 rounded-xl"
+                          className="bg-white text-black font-bold border-2 border-black text-xs px-2 py-2 rounded-lg hover:bg-gray-100 transition-colors"
                         >
-                          Edit
+                          <Edit className="w-3 h-3" />
                         </Button>
                         <Button
                           onClick={() => handleDeleteBatch(paper._id)}
-                          className="bg-black hover:bg-gray-800 text-white font-black border-2 border-gray-300 text-xs px-2 py-2 rounded-xl"
+                          className="mr-5 bg-black text-white font-bold border-2 border-gray-300 text-xs px-2 py-2 rounded-lg hover:bg-gray-800 transition-colors"
                         >
-                          Delete
+                          <Trash2 className="w-3 h-3" />
                         </Button>
                       </div>
                     </div>

@@ -184,10 +184,15 @@ export default function BatchesPage() {
   };
 
   const filteredBatches = batches.filter((batch) => {
+    console.log(batch);
     const matchesSearch =
-      batch.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      batch.teacher.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      batch.description.toLowerCase().includes(searchTerm.toLowerCase());
+      (batch.name ?? " ")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase() || "") ||
+      (batch.teacher ?? " ").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (batch.description ?? " ")
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
     const matchesStandard =
       filterStandard === "" || batch.standard === filterStandard;
     const matchesSubject =
