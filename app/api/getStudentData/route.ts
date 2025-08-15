@@ -7,7 +7,7 @@ export async function GET() {
     const studentNames = await studentModel
       .find(
         {},
-        "firstName lastName standard email age isVerified courseEnrolled phone remarks subjects batch"
+        "firstName address lastName standard email age DOB isVerified courseEnrolled phone remarks subjects batch bloodGroup createdAt parentPhone parentName"
       )
       .lean();
     if (!studentNames || studentNames.length === 0) {

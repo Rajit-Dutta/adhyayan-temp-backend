@@ -22,7 +22,7 @@ const studentSchema = new Schema(
       match: [/^\d{10}$/, "please use a valid phone number"],
     },
     remarks: { type: String },
-    subjects: [{ type: Schema.Types.ObjectId, ref: "Course" }],
+    subjects: { type: String },
     batch: { type: Schema.Types.ObjectId, ref: "Batch" },
     forgotPasswordToken: { type: String },
     forgotPasswordExpiry: { type: Date },
