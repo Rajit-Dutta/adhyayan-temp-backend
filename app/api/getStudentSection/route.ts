@@ -6,15 +6,22 @@ export async function POST(request: NextRequest) {
   try {
     await dbConnect();
 
-    const { searchParams } = new URL(request.url);
-    const ids = searchParams.get("batchId");
+    const { batchIds } = await request.json();
 
-    const batch = await batchModel.find({
-      _id: ids,
+    if (!batchIds || !Array.isArray(batchIds)) {
+      return new Response("Invalid batchIds payload", { status: 400 });
+    }
+
+    const batches = await batchModel.find({
+      _id: { $in: batchIds },
     });
-    return batch;
+
+    return new Response(JSON.stringify(batches), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
-    console.error("Error in getting batch details: ", error);
+    console.error("Error in fetching batches:", error);
     return new Response("Internal Server Error", { status: 500 });
   }
 }

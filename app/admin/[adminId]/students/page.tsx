@@ -57,6 +57,9 @@ export default function StudentsPage() {
   const [editStudent, setEditStudent] = useState<Student | null>(null);
   const [deleteStudent, setDeleteStudent] = useState<Student | null>(null);
   const [editForm, setEditForm] = useState<Student | null>(null);
+  const [displayedSections, setDisplayedSections] = useState<{
+    [batchName: string]: string[];
+  }>({});
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState({
     firstName: "",
@@ -136,9 +139,55 @@ export default function StudentsPage() {
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/getStudentData`
       );
       setStudents(studentRes.data);
-      console.log(studentRes.data);
+      await fetchingStudentToBatchNames(studentRes.data);
     } catch (error) {
       console.error("Error during student data fetch:", error);
+    }
+  };
+
+  const fetchingStudentToBatchNames = async (studentData: any[]) => {
+    try {
+      // Flatten and get unique batch IDs from all students
+      const allBatchIds = studentData.flatMap((student) =>
+        Array.isArray(student.batch)
+          ? student.batch
+          : student.batch?.split(",") || []
+      );
+      const uniqueBatchIds = Array.from(new Set(allBatchIds));
+
+      // Fetch batch details once for all unique batch IDs
+      const batchResponse = await axios.post(
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getStudentSection`,
+        { batchIds: uniqueBatchIds }
+      );
+
+      // Map batchId -> batchName
+      const batchMap: { [batchId: string]: string } = {};
+      batchResponse.data.forEach((batch: any) => {
+        batchMap[batch._id] = batch.name;
+      });
+
+      // Build studentName -> array of batch names map
+      const studentToBatchNamesMap: { [studentName: string]: string[] } = {};
+
+      studentData.forEach((student) => {
+        const studentName = `${student.firstName} ${student.lastName}`;
+        const batches = Array.isArray(student.batch)
+          ? student.batch
+          : student.batch?.split(",") || [];
+        const batchNames = batches.map(
+          (batchId: any) => batchMap[batchId] || "Unknown Batch"
+        );
+
+        studentToBatchNamesMap[studentName] = batchNames;
+      });
+
+      console.log("Student to batch names map:", studentToBatchNamesMap);
+
+      // Update state or use as needed
+      setDisplayedSections(studentToBatchNamesMap);
+    } catch (error) {
+      console.error("Error fetching student to batch names:", error);
     }
   };
 
