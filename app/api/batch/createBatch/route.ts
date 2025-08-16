@@ -1,5 +1,6 @@
 import { dbConnect } from "@/lib/db";
 import batchModel from "@/models/Batch";
+import studentModel from "@/models/Student";
 import { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -21,7 +22,24 @@ export async function POST(request: NextRequest) {
         students,
       });
       const savedBatch = await newBatch.save();
-    
+
+      console.log("Saved batch -> ", savedBatch);
+
+      savedBatch.students.forEach(async (element: any) => {
+        await studentModel.findByIdAndUpdate(element, {
+          $push: {
+            batch: {
+              _id: savedBatch._id,
+              name: savedBatch.name,
+              subject: savedBatch.subject,
+              standard: savedBatch.standard,
+              teacher: savedBatch.teacher,
+              status: savedBatch.status,
+            },
+          },
+        });
+      });
+
       return new Response(JSON.stringify(savedBatch), { status: 201 });
     }
   } catch (error) {

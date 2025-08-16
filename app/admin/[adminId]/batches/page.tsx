@@ -200,6 +200,7 @@ export default function BatchesPage() {
     const matchesStatus = filterStatus === "" || batch.status === filterStatus;
     return matchesSearch && matchesStandard && matchesSubject && matchesStatus;
   });
+  console.log(filteredBatches);
 
   const handleDeleteBatch = async (batchId: number) => {
     if (confirm("Are you sure you want to delete this batch?")) {
@@ -363,9 +364,9 @@ export default function BatchesPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {filteredBatches.map((batch) => (
+              {filteredBatches.map((batch, ind) => (
                 <Card
-                  key={batch._id}
+                  key={ind}
                   className="bg-gray-50 border-2 border-gray-200 rounded-xl hover:bg-gray-100 transition-colors"
                 >
                   <CardContent className="p-6">

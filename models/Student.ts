@@ -23,7 +23,7 @@ const studentSchema = new Schema(
     },
     remarks: { type: String },
     subjects: { type: String },
-    batch: { type: Schema.Types.ObjectId, ref: "Batch" },
+    batch:[{ type: Schema.Types.ObjectId, ref: "Batch" }],
     forgotPasswordToken: { type: String },
     forgotPasswordExpiry: { type: Date },
     verifyToken: { type: String },

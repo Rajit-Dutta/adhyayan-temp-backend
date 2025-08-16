@@ -22,6 +22,7 @@ import { useRouter } from "next/navigation";
 import axios from "axios";
 
 export interface Student {
+  _id?: string | number; // sometimes you set Date.now()
   firstName?: string;
   lastName?: string;
   parentName?: string;
@@ -40,6 +41,10 @@ export interface Student {
   rememberMeExpiry?: string;
   createdAt?: string;
   updatedAt?: string;
+  batch?: string; // you store batch here
+  section?: string; // section used in filter/forms
+  attendance?: number; // used in getAttendanceColor
+  grades?: Record<string, string>; // map subjects → grades
 }
 
 export default function StudentsPage() {
@@ -69,7 +74,7 @@ export default function StudentsPage() {
     DOB: "",
     bloodGroup: "",
     section: "",
-    rollNumber: "",
+    batch: "",
   });
   const [formErrors, setFormErrors] = useState<Student | null>(null);
 
@@ -154,11 +159,11 @@ export default function StudentsPage() {
 
     if (Object.keys(errors).length === 0) {
       const newStudent = {
-        id: Date.now(),
+        _id: Date.now(),
         name: `${addForm.firstName} ${addForm.lastName}`,
         grade: addForm.standard,
         section: addForm.section,
-        rollNumber: addForm.rollNumber,
+        batch: addForm.batch,
         email: addForm.email,
         phone: addForm.phone,
         dateOfBirth: addForm.DOB,
@@ -199,7 +204,7 @@ export default function StudentsPage() {
         DOB: "",
         bloodGroup: "",
         section: "",
-        rollNumber: "",
+        batch: "",
       });
       setFormErrors({});
     }
@@ -264,8 +269,6 @@ export default function StudentsPage() {
     if (!addForm.standard.trim())
       errors.standard = "Grade/Standard is required";
     if (!addForm.section.trim()) errors.section = "Section is required";
-    if (!addForm.rollNumber.trim())
-      errors.rollNumber = "Roll number is required";
     if (!addForm.phone.trim()) errors.phone = "Phone number is required";
     if (!addForm.parentName.trim())
       errors.parentName = "Parent name is required";
@@ -298,11 +301,6 @@ export default function StudentsPage() {
       (s) => s.email?.toLowerCase() === addForm.email.toLowerCase()
     );
     if (existingEmail) errors.email = "Email already exists";
-
-    const existingRoll = students.find(
-      (s) => (s as any).rollNumber === addForm.rollNumber
-    );
-    if (existingRoll) errors.rollNumber = "Roll number already exists";
 
     // Age validation
     const ageNum = Number(addForm.age);
@@ -452,9 +450,9 @@ export default function StudentsPage() {
 
         {/* Students Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredStudents.map((student) => (
+          {filteredStudents.map((student, ind) => (
             <Card
-              key={student._id}
+              key={ind}
               className="bg-white border-2 border-green-500 rounded-2xl hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
             >
               <CardContent className="p-6">
@@ -462,8 +460,8 @@ export default function StudentsPage() {
                 <div className="flex items-center space-x-4 mb-6">
                   <div className="w-16 h-16 bg-green-500 border-2 border-black rounded-xl flex items-center justify-center">
                     <span className="text-white font-black text-xl">
-                      {student.firstName.charAt(0).toUpperCase()}
-                      {student.lastName.charAt(0).toUpperCase()}
+                      {student.firstName?.charAt(0).toUpperCase()}
+                      {student.lastName?.charAt(0).toUpperCase()}
                     </span>
                   </div>
                   <div className="flex-1">
@@ -606,8 +604,8 @@ export default function StudentsPage() {
                     <div className="text-center mb-4">
                       <div className="w-20 h-20 bg-green-500 border-2 border-black rounded-xl flex items-center justify-center mx-auto mb-3">
                         <span className="text-white font-black text-2xl">
-                          {viewStudent.firstName.charAt(0).toUpperCase()}
-                          {viewStudent.lastName.charAt(0).toUpperCase()}
+                          {viewStudent.firstName?.charAt(0).toUpperCase()}
+                          {viewStudent.lastName?.charAt(0).toUpperCase()}
                         </span>
                       </div>
                       <h3 className="text-xl font-black text-black">
@@ -620,7 +618,9 @@ export default function StudentsPage() {
                           Date of Birth
                         </p>
                         <p className="text-sm font-black text-black">
-                          {new Date(viewStudent.DOB).toLocaleDateString()}
+                          {viewStudent.DOB
+                            ? new Date(viewStudent.DOB).toLocaleDateString()
+                            : "N/A"}
                         </p>
                       </div>
                       <div>
@@ -1055,7 +1055,7 @@ export default function StudentsPage() {
                     DOB: "",
                     bloodGroup: "",
                     section: "",
-                    rollNumber: "",
+                    batch: "",
                   });
                   setFormErrors({});
                 }}
@@ -1523,7 +1523,7 @@ export default function StudentsPage() {
                       DOB: "",
                       bloodGroup: "",
                       section: "",
-                      rollNumber: "",
+                      batch: "",
                     });
                     setFormErrors({});
                   }}
