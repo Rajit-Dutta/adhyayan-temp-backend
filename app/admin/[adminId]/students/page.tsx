@@ -76,8 +76,6 @@ export default function StudentsPage() {
     address: "",
     DOB: "",
     bloodGroup: "",
-    section: "",
-    batch: "",
   });
   const [formErrors, setFormErrors] = useState<Student | null>(null);
 
@@ -147,7 +145,6 @@ export default function StudentsPage() {
 
   const fetchingStudentToBatchNames = async (studentData: any[]) => {
     try {
-      // Flatten and get unique batch IDs from all students
       const allBatchIds = studentData.flatMap((student) =>
         Array.isArray(student.batch)
           ? student.batch
@@ -155,23 +152,20 @@ export default function StudentsPage() {
       );
       const uniqueBatchIds = Array.from(new Set(allBatchIds));
 
-      // Fetch batch details once for all unique batch IDs
       const batchResponse = await axios.post(
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/getStudentSection`,
         { batchIds: uniqueBatchIds }
       );
 
-      // Map batchId -> batchName
       const batchMap: { [batchId: string]: string } = {};
       batchResponse.data.forEach((batch: any) => {
         batchMap[batch._id] = batch.name;
       });
 
-      // Build studentName -> array of batch names map
-      const studentToBatchNamesMap: { [studentName: string]: string[] } = {};
+      const studentToBatchNamesMap: { [studentEmail: string]: string[] } = {};
 
       studentData.forEach((student) => {
-        const studentName = `${student.firstName} ${student.lastName}`;
+        const studentEmail = `${student.email}`;
         const batches = Array.isArray(student.batch)
           ? student.batch
           : student.batch?.split(",") || [];
@@ -179,12 +173,9 @@ export default function StudentsPage() {
           (batchId: any) => batchMap[batchId] || "Unknown Batch"
         );
 
-        studentToBatchNamesMap[studentName] = batchNames;
+        studentToBatchNamesMap[studentEmail] = batchNames;
       });
 
-      console.log("Student to batch names map:", studentToBatchNamesMap);
-
-      // Update state or use as needed
       setDisplayedSections(studentToBatchNamesMap);
     } catch (error) {
       console.error("Error fetching student to batch names:", error);
@@ -202,40 +193,26 @@ export default function StudentsPage() {
     return matchesSearch && matchesStandard;
   });
 
-  const handleAddStudent = () => {
+  const handleAddStudent = async (e: React.FormEvent) => {
+    e.preventDefault();
     const errors = validateAddForm();
     setFormErrors(errors);
 
-    if (Object.keys(errors).length === 0) {
-      const newStudent = {
-        _id: Date.now(),
-        name: `${addForm.firstName} ${addForm.lastName}`,
-        grade: addForm.standard,
-        section: addForm.section,
-        batch: addForm.batch,
-        email: addForm.email,
-        phone: addForm.phone,
-        dateOfBirth: addForm.DOB,
-        address: addForm.address,
-        parentName: addForm.parentName,
-        parentPhone: addForm.parentPhone,
-        status: "Active",
-        subjects: addForm.subjects,
-        grades: addForm.subjects.split(",").reduce((acc: any, subject) => {
-          const grades = ["A+", "A", "B+", "B", "C+", "C"];
-          acc[subject] = grades[Math.floor(Math.random() * grades.length)];
-          return acc;
-        }, {}),
-        joinDate: new Date().toISOString().split("T")[0],
-        bloodGroup: addForm.bloodGroup,
-        emergencyContact: addForm.parentPhone,
-        age: Number.parseInt(addForm.age),
-        isVerified: addForm.isVerified,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
+    if (Object.keys(errors).length > 0) return;
 
-      setStudents([...students, newStudent]);
+    const newStudent = {
+      ...addForm,
+      createdDate: new Date().toISOString().split("T")[0],
+      updatedDate: new Date().toISOString().split("T"),
+    };
+
+    try {
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/createStudentData`,
+        newStudent
+      );
+      setStudents((prevStudents) => [...prevStudents, response.data]);
+
       setShowAddModal(false);
       setAddForm({
         firstName: "",
@@ -252,10 +229,10 @@ export default function StudentsPage() {
         address: "",
         DOB: "",
         bloodGroup: "",
-        section: "",
-        batch: "",
       });
       setFormErrors({});
+    } catch (error) {
+      console.error("Error in creating a student: ", error);
     }
   };
 
@@ -317,7 +294,6 @@ export default function StudentsPage() {
     if (!addForm.password.trim()) errors.password = "Password is required";
     if (!addForm.standard.trim())
       errors.standard = "Grade/Standard is required";
-    if (!addForm.section.trim()) errors.section = "Section is required";
     if (!addForm.phone.trim()) errors.phone = "Phone number is required";
     if (!addForm.parentName.trim())
       errors.parentName = "Parent name is required";
@@ -366,18 +342,22 @@ export default function StudentsPage() {
   };
 
   const handleSubjectToggle = (subject: any) => {
-    if (addForm.subjects?.split(",").includes(subject)) {
+    const subjectsArr = addForm.subjects
+      ? addForm.subjects.split(",").filter(Boolean)
+      : [];
+    if (subjectsArr.includes(subject)) {
+      const updatedSubjects = subjectsArr
+        .filter((s) => s !== subject)
+        .join(",");
       setAddForm({
         ...addForm,
-        subjects: addForm.subjects
-          .split(",")
-          .filter((s) => s !== subject)
-          .toString(),
+        subjects: updatedSubjects,
       });
     } else {
+      const updatedSubjects = [...subjectsArr, subject].join(",");
       setAddForm({
         ...addForm,
-        subjects: [...addForm.subjects?.split(","), subject].toString(),
+        subjects: updatedSubjects,
       });
     }
   };
@@ -523,7 +503,9 @@ export default function StudentsPage() {
                         {student.standard}
                       </span>
                       <span className="bg-white border-2 border-gray-300 text-gray-700 px-3 py-1 font-black text-xs rounded-lg">
-                        {/* SEC {student.section} */}
+                        {displayedSections[
+                          student.email ? student.email : ""
+                        ]?.join(", ")}
                       </span>
                     </div>
                   </div>
@@ -710,8 +692,10 @@ export default function StudentsPage() {
                         Grade {viewStudent.standard}
                       </span>
                       <span className="bg-white border-2 border-gray-300 text-gray-700 px-4 py-2 font-black text-sm rounded-xl">
-                        Section
-                        {/* {viewStudent.batch} */}
+                        Section{" "}
+                        {displayedSections[
+                          viewStudent.email ? viewStudent.email : ""
+                        ]?.join(", ")}
                       </span>
                     </div>
                     <div>
@@ -1103,8 +1087,6 @@ export default function StudentsPage() {
                     address: "",
                     DOB: "",
                     bloodGroup: "",
-                    section: "",
-                    batch: "",
                   });
                   setFormErrors({});
                 }}
@@ -1293,7 +1275,7 @@ export default function StudentsPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4">
                       <div>
                         <label className="block text-sm font-bold text-gray-700 mb-2">
                           Grade/Standard <span className="text-red-500">*</span>
@@ -1321,39 +1303,13 @@ export default function StudentsPage() {
                           </p>
                         )}
                       </div>
-                      <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2">
-                          Section <span className="text-red-500">*</span>
-                        </label>
-                        {/* <select
-                          value={addForm.section}
-                          onChange={(e) =>
-                            setAddForm({ ...addForm, section: e.target.value })
-                          }
-                          className={`w-full px-4 py-3 border-2 rounded-xl font-bold text-black focus:outline-none focus:ring-2 focus:ring-green-400 ${
-                            formErrors?.section
-                              ? "border-red-500"
-                              : "border-black"
-                          }`}
-                        >
-                          <option value="">Select Section</option>
-                          <option value="A">Section A</option>
-                          <option value="B">Section B</option>
-                          <option value="C">Section C</option>
-                        </select>
-                        {formErrors?.section && (
-                          <p className="text-red-500 text-xs font-bold mt-1">
-                            {formErrors?.section}
-                          </p>
-                        )} */}
-                      </div>
                     </div>
 
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-2">
                         Subjects <span className="text-red-500">*</span>
                       </label>
-                      <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border-2 border-gray-300 rounded-xl p-3">
+                      <div className="grid grid-cols-2 gap-2 border-2 border-gray-300 rounded-xl p-3">
                         {[
                           "Mathematics",
                           "Science",
@@ -1571,8 +1527,6 @@ export default function StudentsPage() {
                       address: "",
                       DOB: "",
                       bloodGroup: "",
-                      section: "",
-                      batch: "",
                     });
                     setFormErrors({});
                   }}
