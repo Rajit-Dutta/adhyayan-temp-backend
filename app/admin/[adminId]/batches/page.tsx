@@ -200,7 +200,6 @@ export default function BatchesPage() {
     const matchesStatus = filterStatus === "" || batch.status === filterStatus;
     return matchesSearch && matchesStandard && matchesSubject && matchesStatus;
   });
-  console.log(filteredBatches);
 
   const handleDeleteBatch = async (batchId: number) => {
     if (confirm("Are you sure you want to delete this batch?")) {

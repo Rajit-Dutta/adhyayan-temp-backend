@@ -249,20 +249,51 @@ export default function StudentsPage() {
     setDeleteStudent(student);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async (studentId: any) => {
     if (!deleteStudent) return;
-    setStudents(students.filter((s: Student) => s._id !== deleteStudent._id));
-    setDeleteStudent(null);
+    try {
+      const response = await axios.delete(
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/deleteStudentData`,
+        {
+          params: { id: studentId },
+        }
+      );
+      console.log("Batch deleted successfully:", response.data);
+
+      setStudents((prevStudents) =>
+        prevStudents.filter((student) => student._id !== studentId)
+      );
+      setDeleteStudent(null);
+    } catch (error) {
+      console.error("Error deleting student: ", error);
+      return new Response("Internal Server Error", { status: 500 });
+    }
   };
 
-  const saveEdit = () => {
-    if (editStudent && editForm) {
-      setStudents(
-        students.map((s: any) =>
-          s._id === editStudent._id ? ({ ...editForm } as Student) : s
-        )
+  const saveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const updatedStudent = {
+      ...editForm,
+      updatedDate: new Date().toISOString().split("T")[0],
+    };
+    try {
+      const response = await axios.put(
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/editStudentData`,
+        updatedStudent
       );
+      console.log("Successfully created batch -> ", response.data);
+      if (updatedStudent && editForm) {
+        setStudents(
+          students.map((s: any) =>
+            s._id === updatedStudent._id ? ({ ...editForm } as Student) : s
+          )
+        );
+      }
+    } catch (error) {
+      console.error("Error in updating a student details :", error);
+      return new Response("Internal Server Error", { status: 500 });
     }
+
     setEditStudent(null);
     setEditForm(null);
   };
@@ -854,7 +885,7 @@ export default function StudentsPage() {
                       className="w-full px-4 py-3 border-2 border-black rounded-xl font-bold text-black focus:outline-none focus:ring-2 focus:ring-green-400"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4">
                     <div>
                       <label className="block text-sm font-bold text-gray-700 mb-2">
                         Grade
@@ -870,22 +901,6 @@ export default function StudentsPage() {
                         <option value="10th">10th Grade</option>
                         <option value="11th">11th Grade</option>
                         <option value="12th">12th Grade</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-2">
-                        Section
-                      </label>
-                      <select
-                        // value={editForm?.batch || ""}
-                        // onChange={(e) =>
-                        //   setEditForm({ ...editForm, section: e.target.value })
-                        // }
-                        className="w-full px-4 py-3 border-2 border-black rounded-xl font-bold text-black focus:outline-none focus:ring-2 focus:ring-green-400"
-                      >
-                        <option value="A">Section A</option>
-                        <option value="B">Section B</option>
-                        <option value="C">Section C</option>
                       </select>
                     </div>
                   </div>
@@ -996,6 +1011,57 @@ export default function StudentsPage() {
                   </div>
                 </div>
               </div>
+              <div className="lg:col-span-2">
+                <label className="block text-sm font-bold text-gray-700 mb-2">
+                  Subjects
+                </label>
+                <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto border-2 border-gray-300 rounded-xl p-3">
+                  {[
+                    "Mathematics",
+                    "Science",
+                    "English",
+                    "Physics",
+                    "Chemistry",
+                    "Biology",
+                    "Computer Science",
+                  ].map((subject) => (
+                    <div
+                      key={subject}
+                      onClick={() => {
+                        const currentSubjects =
+                          editForm?.subjects?.split(",") || [];
+                        if (currentSubjects.includes(subject)) {
+                          setEditForm({
+                            ...editForm,
+                            subjects: currentSubjects
+                              .filter((s) => s !== subject)
+                              .toString(),
+                          });
+                        } else {
+                          setEditForm({
+                            ...editForm,
+                            subjects: [...currentSubjects, subject].toString(),
+                          });
+                        }
+                      }}
+                      className={`p-2 border-2 rounded-lg cursor-pointer transition-all text-sm font-bold text-center ${
+                        editForm?.subjects?.split(",").includes(subject) ||
+                        false
+                          ? "bg-green-100 border-green-500 text-green-700"
+                          : "bg-white border-gray-300 hover:bg-gray-100"
+                      }`}
+                    >
+                      {subject}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs font-bold text-gray-600 mt-2">
+                  Selected:{" "}
+                  {editForm?.subjects
+                    ? editForm.subjects.split(",").filter(Boolean).join(", ")
+                    : "None"}
+                </p>
+              </div>
 
               <div className="flex justify-end space-x-4 mt-6 pt-6 border-t-2 border-gray-300">
                 <Button
@@ -1050,7 +1116,7 @@ export default function StudentsPage() {
                   Cancel
                 </Button>
                 <Button
-                  onClick={confirmDelete}
+                  onClick={() => confirmDelete(deleteStudent._id)}
                   className="flex-1 bg-red-500 hover:bg-red-600 text-white font-black border-2 border-black rounded-xl py-3"
                 >
                   Delete
