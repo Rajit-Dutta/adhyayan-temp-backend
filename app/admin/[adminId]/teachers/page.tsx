@@ -502,13 +502,15 @@ export default function TeachersPage() {
                 <CardHeader>
                   <CardTitle className="text-lg font-black text-black flex items-center">
                     <Users className="w-5 h-5 mr-2 text-green-600" />
-                    Classes Teaching ({viewTeacher.classesToTeach[0].length}{" "}
+                    Classes Teaching ({
+                      viewTeacher.classesToTeach[0].length
+                    }{" "}
                     classes)
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                    {viewTeacher.classesToTeach[0].map((className : string) => (
+                    {viewTeacher.classesToTeach.map((className: string) => (
                       <div
                         key={className}
                         className="bg-green-100 border-2 border-green-300 text-green-700 px-4 py-3 font-black text-center rounded-xl shadow-[2px_2px_0px_0px_#22c55e]"
@@ -601,15 +603,7 @@ export default function TeachersPage() {
                     <option value="Chemistry">Chemistry</option>
                     <option value="Biology">Biology</option>
                     <option value="English">English</option>
-                    <option value="Hindi">Hindi</option>
-                    <option value="History">History</option>
-                    <option value="Geography">Geography</option>
                     <option value="Computer Science">Computer Science</option>
-                    <option value="Physical Education">
-                      Physical Education
-                    </option>
-                    <option value="Art">Art</option>
-                    <option value="Music">Music</option>
                   </select>
                 </div>
 
@@ -654,28 +648,43 @@ export default function TeachersPage() {
                     Classes to Teach <span className="text-red-500">*</span>
                   </label>
                   <div className="grid grid-cols-4 gap-2 border-2 border-gray-300 rounded-xl p-4">
-                    {[
-                      "9th A",
-                      "9th B",
-                      "10th A",
-                      "10th B",
-                      "11th A",
-                      "11th B",
-                      "12th A",
-                      "12th B",
-                    ].map((className) => (
-                      <div
-                        key={className}
-                        onClick={() => handleClassSelection(className)}
-                        className={`p-3 border-2 rounded-lg cursor-pointer transition-all text-sm font-bold text-center hover:scale-105 ${
-                          (editForm.classesToTeach || []).includes(className)
-                            ? "bg-green-100 border-green-500 text-green-700 shadow-[2px_2px_0px_0px_#22c55e]"
-                            : "bg-white border-gray-300 hover:bg-gray-100 shadow-[2px_2px_0px_0px_#000]"
-                        }`}
-                      >
-                        {className}
-                      </div>
-                    ))}
+                    {["6", "7", "8", "9", "10", "11", "12", "Others"].map(
+                      (className) => (
+                        <div
+                          key={className}
+                          onClick={() => {
+                            const currentClassesToTeach =
+                              editForm?.classesToTeach ?? [];
+
+                            console.log(currentClassesToTeach);
+
+                            if (currentClassesToTeach.includes(className)) {
+                              setEditForm({
+                                ...editForm,
+                                classesToTeach: currentClassesToTeach.filter(
+                                  (c: any) => c !== className
+                                ),
+                              });
+                            } else {
+                              setEditForm({
+                                ...editForm,
+                                classesToTeach: [
+                                  ...currentClassesToTeach,
+                                  className,
+                                ],
+                              });
+                            }
+                          }}
+                          className={`p-3 border-2 rounded-lg cursor-pointer transition-all text-sm font-bold text-center hover:scale-105 ${
+                            editForm?.classesToTeach?.[0]?.includes(className)
+                              ? "bg-green-100 border-green-500 text-green-700 shadow-[2px_2px_0px_0px_#22c55e]"
+                              : "bg-white border-gray-300 hover:bg-gray-100 shadow-[2px_2px_0px_0px_#000]"
+                          }`}
+                        >
+                          {className}
+                        </div>
+                      )
+                    )}
                   </div>
                   <p className="text-sm font-bold text-gray-600 mt-3">
                     Selected Classes:{" "}

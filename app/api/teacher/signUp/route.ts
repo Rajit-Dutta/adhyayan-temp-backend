@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
 
       const tokenData = {
         id: savedTeacher._id,
+        fullName: newTeacher.fullName,
         email: newTeacher.email,
         userType: "teacher",
       };

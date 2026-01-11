@@ -267,6 +267,7 @@ export default function BatchesPage() {
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
+                  suppressHydrationWarning
                   type="text"
                   placeholder="Search batches by name, teacher, or description..."
                   value={searchTerm}
@@ -276,6 +277,7 @@ export default function BatchesPage() {
               </div>
               <div className="flex gap-3 flex-wrap">
                 <select
+                  suppressHydrationWarning
                   value={filterStandard}
                   onChange={(e) => setFilterStandard(e.target.value)}
                   className="px-4 py-3 border-2 border-gray-300 rounded-xl font-semibold focus:border-green-500 focus:ring-0"
@@ -287,6 +289,7 @@ export default function BatchesPage() {
                   <option value="12th">12th</option>
                 </select>
                 <select
+                  suppressHydrationWarning
                   value={filterSubject}
                   onChange={(e) => setFilterSubject(e.target.value)}
                   className="px-4 py-3 border-2 border-gray-300 rounded-xl font-semibold focus:border-green-500 focus:ring-0"
@@ -298,6 +301,7 @@ export default function BatchesPage() {
                   <option value="History">History</option>
                 </select>
                 <select
+                  suppressHydrationWarning
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
                   className="px-4 py-3 border-2 border-gray-300 rounded-xl font-semibold focus:border-green-500 focus:ring-0"
@@ -307,6 +311,7 @@ export default function BatchesPage() {
                   <option value="Inactive">Inactive</option>
                 </select>
                 <Button
+                  suppressHydrationWarning
                   onClick={() => setShowCreateModal(true)}
                   className="bg-green-500 hover:bg-green-600 text-white font-bold border-2 border-black rounded-xl px-6"
                 >
@@ -519,8 +524,22 @@ function CreateBatchModal({
 
   const filteredStudents = availableStudents.filter(
     (student: any) =>
-      formData.standard === "" || student.standard === formData.standard
+      (formData.standard === "" && formData.subject === "") ||
+      (formData.standard &&
+        !formData.subject &&
+        student.standard === formData.standard) ||
+      (formData.subject &&
+        !formData.standard &&
+        student.subjects.includes(formData.subject)) ||
+      (formData.standard &&
+        formData.subject &&
+        student.standard === formData.standard &&
+        student.subjects.includes(formData.subject))
   );
+
+  useEffect(() => {
+    setSelectedStudents([]);
+  }, [formData.standard, formData.subject]);
 
   const handleStudentToggle = (student: any) => {
     if (selectedStudents.find((s: any) => s._id === student._id)) {
@@ -973,7 +992,7 @@ function ViewBatchModal({
                   </p>
                   <p>
                     <span className="font-semibold">Created:</span>{" "}
-                    {batch.createdDate}
+                    {batch.createdAt?.slice(0, 10)}
                   </p>
                 </div>
               </div>

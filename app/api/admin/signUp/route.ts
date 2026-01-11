@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
       const savedAdmin = await newAdmin.save();
       const tokenData = {
         id: savedAdmin._id,
+        fullName:newAdmin.fullName,
         email: newAdmin.email,
         userType: "admin",
       };

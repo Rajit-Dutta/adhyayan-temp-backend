@@ -424,11 +424,12 @@ export default function QuestionPapersPage() {
                       </div>
                       <div className="text-center">
                         <p className="font-semibold text-gray-700 text-sm">
-                          {
-                            new Date(paper.createdAt)
-                              .toISOString()
-                              .split("T")[0]
-                          }
+                          {(() => {
+                            const d = new Date(paper.createdAt);
+                            return isNaN(d.getTime())
+                              ? "—"
+                              : d.toISOString().split("T")[0];
+                          })()}
                         </p>
                       </div>
                       <div className="flex">

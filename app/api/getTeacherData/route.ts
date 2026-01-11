@@ -7,6 +7,8 @@ export async function GET() {
 
     const teacherData = await teacherModel.find({}, "fullName").lean();
 
+    console.log("From route.ts-> ",teacherData)
+
     if (!teacherData || teacherData.length === 0) {
       return new Response("No teachers found", { status: 404 });
     }
