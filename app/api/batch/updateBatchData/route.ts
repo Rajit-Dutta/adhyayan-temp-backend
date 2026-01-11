@@ -9,6 +9,7 @@ export async function PUT(request: NextRequest) {
       await request.json();
 
     const existingBatch = await batchModel.findOne({ name, subject, standard });
+    console.log(existingBatch);
     if (existingBatch) {
       const _id = existingBatch._id;
       const updatedBatch = await batchModel.findByIdAndUpdate(
@@ -23,13 +24,16 @@ export async function PUT(request: NextRequest) {
         },
         { new: true }
       );
-
+      console.log("UpdatedBatch: ", updatedBatch);
       if (!updatedBatch) {
         return NextResponse.json({ error: "Batch not found" }, { status: 404 });
       }
 
       // ✅ Send back the updated batch
-      return NextResponse.json({ message: "Batch updated successfully", updatedBatch }, { status: 200 });
+      return NextResponse.json(
+        { message: "Batch updated successfully", updatedBatch },
+        { status: 200 }
+      );
     } else {
       return NextResponse.json({ error: "Batch not found" }, { status: 404 });
     }

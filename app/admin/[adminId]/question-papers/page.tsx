@@ -669,67 +669,69 @@ function UploadPaperModal({
                   <option value="12th">12th</option>
                 </select>
               </div>
-
-              <div>
-                <label className="block text-sm font-black text-black mb-2">
-                  Total Marks *
-                </label>
-                <input
-                  type="number"
-                  value={formData.totalMarks}
-                  onChange={(e) =>
-                    setFormData({ ...formData, totalMarks: e.target.value })
-                  }
-                  className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400"
-                  placeholder="Enter total marks"
-                  min="1"
-                  required
-                />
+              <div className="flex justify-center items-center flex-col">
+                <div className="w-full">
+                  <label className="block text-sm font-black text-black mb-2">
+                    Total Marks *
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.totalMarks}
+                    onChange={(e) =>
+                      setFormData({ ...formData, totalMarks: e.target.value })
+                    }
+                    className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400"
+                    placeholder="Enter total marks"
+                    min="1"
+                    required
+                  />
+                </div>
+                <div className="w-full mt-5">
+                  <label className="block text-sm font-black text-black mb-2">
+                    Assigned By *
+                  </label>
+                  <select
+                    value={formData.assignedBy}
+                    onChange={(e) =>
+                      setFormData({ ...formData, assignedBy: e.target.value })
+                    }
+                    className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                    required
+                  >
+                    <option value="">Select Teacher</option>
+                    {teachers.map((teacher: any) => (
+                      <option key={teacher._id} value={teacher._id}>
+                        {teacher.fullName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-            </div>
-
-            {/* Assignment Information */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div>
+              {/* Assignment Information */}
+              <div className="flex justify-start items-start flex-col">
                 <label className="block text-sm font-black text-black mb-2">
-                  Assigned By *
+                  Assign to *
                 </label>
                 <select
-                  value={formData.assignedBy}
-                  onChange={(e) =>
-                    setFormData({ ...formData, assignedBy: e.target.value })
-                  }
-                  className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                  required
+                  multiple
+                  className="border-2 border-black rounded-xl w-full p-4 max-h-40 overflow-y-auto bg-white"
                 >
-                  <option value="">Select Teacher</option>
-                  {teachers.map((teacher: any) => (
-                    <option key={teacher._id} value={teacher._id}>
-                      {teacher.fullName}
+                  {batches.map((batch: any) => (
+                    <option
+                      key={batch._id}
+                      value={batch._id}
+                      onClick={() => handleBatchToggle(batch)}
+                      className={`p-3 border-2 rounded-lg cursor-pointer transition-all text-sm font-bold ${
+                        formData.assignedTo.includes(batch)
+                          ? "bg-green-100 border-green-500 text-green-700"
+                          : "bg-gray-50 border-gray-300 hover:bg-gray-100"
+                      }`}
+                    >
+                      {batch.name}
                     </option>
                   ))}
                 </select>
               </div>
-
-              <select
-                multiple
-                className="border-2 border-black rounded-xl p-4 max-h-32 overflow-y-auto bg-white"
-              >
-                {batches.map((batch: any) => (
-                  <option
-                    key={batch._id}
-                    value={batch._id}
-                    onClick={() => handleBatchToggle(batch)}
-                    className={`p-3 border-2 rounded-lg cursor-pointer transition-all text-sm font-bold ${
-                      formData.assignedTo.includes(batch)
-                        ? "bg-green-100 border-green-500 text-green-700"
-                        : "bg-gray-50 border-gray-300 hover:bg-gray-100"
-                    }`}
-                  >
-                    {batch.name}
-                  </option>
-                ))}
-              </select>
             </div>
 
             {/* Submission Settings */}

@@ -8,6 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ArrowLeft,
   Users,
+  UsersRound,
+  CircleCheckBig,
+  LibraryBig,
   Plus,
   Search,
   Edit,
@@ -126,7 +129,7 @@ export default function BatchesPage() {
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/batch/getBatchData`
       );
-      console.log(response.data);
+      //console.log(response.data);
       const batchData = response.data;
       setBatches(batchData);
       await fetchingTeacherAndStudentDisplayDetails(batchData);
@@ -223,7 +226,7 @@ export default function BatchesPage() {
   };
 
   const handleEditBatch = (batch: any) => {
-    setSelectedBatch(batch);
+    setSelectedBatch(JSON.parse(JSON.stringify(batch)));
     setShowEditModal(true);
   };
 
@@ -335,6 +338,7 @@ export default function BatchesPage() {
             </div>
           </Card>
           <Card className="bg-white border-2 border-green-500 rounded-xl p-6 text-center">
+            <CircleCheckBig className="w-8 h-8 text-green-500 mx-auto mb-3" />
             <div className="text-3xl font-black text-black">
               {batches.filter((b) => b.status === "Active").length}
             </div>
@@ -343,6 +347,7 @@ export default function BatchesPage() {
             </div>
           </Card>
           <Card className="bg-green-500 border-2 border-white rounded-xl p-6 text-center">
+            <UsersRound className="w-8 h-8 text-white mx-auto mb-3" />
             <div className="text-3xl font-black text-white">
               {batches.reduce((sum, b) => sum + b.students.length, 0)}
             </div>
@@ -351,6 +356,7 @@ export default function BatchesPage() {
             </div>
           </Card>
           <Card className="bg-white border-2 border-green-500 rounded-xl p-6 text-center">
+            <LibraryBig className="w-8 h-8 text-green-500 mx-auto mb-3" />
             <div className="text-3xl font-black text-black">
               {new Set(batches.map((b) => b.subject)).size}
             </div>
@@ -415,9 +421,19 @@ export default function BatchesPage() {
                           {batch.status}
                         </span>
                       </div>
-                      <div className="text-center">
+                      <div className="text-center flex justify-center items-center flex-col ">
                         <p className="font-semibold text-gray-700 text-sm">
-                          {batch.createdDate}
+                          {batch.createdAt.split("T")[0]}
+                        </p>
+                        <p className="text-gray-700 font-bold text-xs mt-1">
+                          {new Date(batch.createdAt).toLocaleTimeString(
+                            "en-US",
+                            {
+                              hour: "numeric",
+                              minute: "2-digit",
+                              hour12: true,
+                            }
+                          )}
                         </p>
                       </div>
                       <div className="flex space-x-2">
@@ -469,15 +485,16 @@ export default function BatchesPage() {
               setShowEditModal(false);
               setSelectedBatch(null);
             }}
-            onSave={(updatedBatch) => {
-              setBatches(
-                batches.map((b) =>
-                  b.id === updatedBatch.id ? updatedBatch : b
-                )
-              );
-              setShowEditModal(false);
-              setSelectedBatch(null);
-            }}
+            onSave={
+              async (/*updatedBatch*/) => {
+                // setBatches((prev) =>
+                //   prev.map((b) => (b.id === updatedBatch.id ? updatedBatch : b))
+                // );
+                await fetchBatchDetails();
+                setShowEditModal(false);
+                setSelectedBatch(null);
+              }
+            }
             availableStudents={availableStudents}
             teachers={teachers}
           />
@@ -552,13 +569,19 @@ function CreateBatchModal({
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const newBatch = {
-      ...formData,
-      students: selectedStudents,
-      createdDate: new Date().toISOString().split("T")[0],
-    };
     try {
+      e.preventDefault();
+      const newBatch = {
+        ...formData,
+        students: selectedStudents.map((s: any) => s._id),
+        createdDate: new Date().toISOString().split("T")[0],
+        createdTime: new Date().toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        }),
+      };
+      console.log("New batch -> ", newBatch);
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/batch/createBatch`,
         newBatch
@@ -737,7 +760,11 @@ function EditBatchModal({
 }) {
   const [formData, setFormData] = useState({
     ...batch,
+    students: [...batch.students],
   });
+
+  console.log(formData);
+
   const [selectedStudents, setSelectedStudents] = useState(
     availableStudents.filter((s: any) => batch.students.includes(s._id))
   );
@@ -748,6 +775,7 @@ function EditBatchModal({
   );
   const handleStudentToggleEdit = (student: any) => {
     const isSelected = selectedStudents.some((s: any) => s._id === student._id);
+    console.log(isSelected);
 
     if (isSelected) {
       setSelectedStudents((prev: any[]) =>
@@ -762,9 +790,9 @@ function EditBatchModal({
     e.preventDefault();
     const updatedBatch = {
       ...formData,
-      students: selectedStudents,
-      createdDate: new Date().toISOString().split("T")[0],
+      students: selectedStudents.map((s: any) => s._id),
     };
+
     try {
       const response = await axios.put(
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/batch/updateBatchData`,
@@ -942,6 +970,7 @@ function ViewBatchModal({
   displayedTeacher: any;
   displayedStudents: any;
 }) {
+  console.log(batch);
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <Card className="bg-white border-2 border-green-500 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
@@ -953,49 +982,21 @@ function ViewBatchModal({
         <CardContent>
           <div className="space-y-6">
             {/* Batch Info */}
-            <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-              <div className="bg-gray-50 p-4 rounded-xl border-2 border-gray-200">
-                <h3 className="font-black text-black mb-2">
-                  Batch Information
-                </h3>
-                <div className="space-y-2">
-                  <p>
-                    <span className="font-semibold">Name:</span> {batch.name}
-                  </p>
-                  <p>
-                    <span className="font-semibold">Subject:</span>{" "}
-                    {batch.subject}
-                  </p>
-                  <p>
-                    <span className="font-semibold">Standard:</span>{" "}
-                    {batch.standard}
-                  </p>
-                  <p>
-                    <span className="font-semibold">Section:</span>{" "}
-                    {batch.section}
-                  </p>
-                  <p>
-                    <span className="font-semibold">Teacher:</span>{" "}
-                    {displayedTeacher[batch.teacher] || "N/A"}
-                  </p>
-                  <p>
-                    <span className="font-semibold">Status:</span>
-                    <span
-                      className={`ml-2 px-2 py-1 rounded text-sm font-bold ${
-                        batch.status === "Active"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-red-100 text-red-700"
-                      }`}
-                    >
-                      {batch.status}
-                    </span>
-                  </p>
-                  <p>
-                    <span className="font-semibold">Created:</span>{" "}
-                    {batch.createdAt?.slice(0, 10)}
-                  </p>
-                </div>
-              </div>
+            <div className="bg-gray-50 p-4 rounded-xl border-2 border-gray-200">
+              <p>
+                <span className="font-semibold">Name:</span> {batch.name}
+              </p>
+              <p>
+                <span className="font-semibold">Subject:</span> {batch.subject}
+              </p>
+              <p>
+                <span className="font-semibold">Standard:</span>{" "}
+                {batch.standard}
+              </p>
+              <p>
+                <span className="font-semibold">Teacher:</span>{" "}
+                {displayedTeacher[batch.teacher] || "N/A"}
+              </p>
             </div>
 
             {/* Students List */}
@@ -1003,9 +1004,9 @@ function ViewBatchModal({
               <h3 className="font-black text-black mb-4">
                 Students in Batch ({batch.students.length})
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {batch.students.map((studentId: any) => (
-                  <li key={studentId}>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 ml-5 scroll-smooth">
+                {batch.students.map((studentId: any, i: number) => (
+                  <li key={i}>
                     {displayedStudents[studentId] || "Loading..."}
                   </li>
                 ))}
@@ -1013,12 +1014,7 @@ function ViewBatchModal({
             </div>
 
             <div className="flex justify-end">
-              <Button
-                onClick={onClose}
-                className="bg-gray-500 hover:bg-gray-600 text-white font-bold border-2 border-black rounded-xl px-8"
-              >
-                Close
-              </Button>
+              <Button onClick={onClose}>Close</Button>
             </div>
           </div>
         </CardContent>
