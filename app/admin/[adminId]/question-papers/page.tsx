@@ -297,6 +297,7 @@ export default function QuestionPapersPage() {
               <div className="flex-1 relative">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-600" />
                 <input
+                  suppressHydrationWarning
                   type="text"
                   placeholder="Search question papers by name"
                   value={searchTerm}
@@ -308,6 +309,7 @@ export default function QuestionPapersPage() {
                 <div className="relative">
                   <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-600" />
                   <select
+                    suppressHydrationWarning
                     value={filterSubject}
                     onChange={(e) => setFilterSubject(e.target.value)}
                     className="pl-12 pr-8 py-4 border-2 border-black rounded-xl font-bold text-black focus:outline-none focus:ring-2 focus:ring-green-400 appearance-none bg-white"
@@ -323,6 +325,7 @@ export default function QuestionPapersPage() {
                   <div className="relative">
                     <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-600" />
                     <select
+                      suppressHydrationWarning
                       value={filterTeacher}
                       onChange={(e) => setFilterTeacher(e.target.value)}
                       className="pl-12 pr-8 py-4 border-2 border-black rounded-xl font-bold text-black focus:outline-none focus:ring-2 focus:ring-green-400 appearance-none bg-white"
@@ -340,6 +343,7 @@ export default function QuestionPapersPage() {
                   <div className="relative">
                     <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-600" />
                     <select
+                      suppressHydrationWarning
                       value={filterGrade}
                       onChange={(e) => setFilterGrade(e.target.value)}
                       className="pl-12 pr-8 py-4 border-2 border-black rounded-xl font-bold text-black focus:outline-none focus:ring-2 focus:ring-green-400 appearance-none bg-white"
@@ -535,6 +539,25 @@ function UploadPaperModal({
   teachers: any;
   batches: any;
 }) {
+  console.log(formData);
+  batches.map((batch: any) => {
+    console.log(batch);
+  });
+  const filteredBatches = batches.filter(
+    (batch: any) =>
+      (formData.grade === "" && formData.subject === "") ||
+      (formData.grade &&
+        !formData.subject &&
+        batch.standard === formData.grade) ||
+      (formData.subject &&
+        !formData.grade &&
+        batch.subject == formData.subject) ||
+      (formData.grade &&
+        formData.subject &&
+        batch.standard === formData.grade &&
+        batch.subject === formData.subject)
+  );
+
   const handleBatchToggle = (batch: string) => {
     console.log("Initial formData -> ", formData.assignedTo);
     console.log(batch);
@@ -716,7 +739,7 @@ function UploadPaperModal({
                   multiple
                   className="border-2 border-black rounded-xl w-full p-4 max-h-40 overflow-y-auto bg-white"
                 >
-                  {batches.map((batch: any) => (
+                  {filteredBatches.map((batch: any) => (
                     <option
                       key={batch._id}
                       value={batch._id}
