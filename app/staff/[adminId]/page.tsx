@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "@/lib/firebase";
+import { storage } from "@/lib/config/firebase.config";
 import { ArrowLeft, Users, GraduationCap, FileText, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import axios from "axios";

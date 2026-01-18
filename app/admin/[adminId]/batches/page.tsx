@@ -574,12 +574,6 @@ function CreateBatchModal({
       const newBatch = {
         ...formData,
         students: selectedStudents.map((s: any) => s._id),
-        createdDate: new Date().toISOString().split("T")[0],
-        createdTime: new Date().toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true,
-        }),
       };
       console.log("New batch -> ", newBatch);
       const response = await axios.post(

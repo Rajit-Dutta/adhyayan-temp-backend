@@ -1,7 +1,6 @@
 "use client";
 
 import type React from "react";
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -273,10 +272,6 @@ export default function QuestionPapersPage() {
             </div>
 
             <div className="flex items-center space-x-4">
-              <Button className="bg-white hover:bg-gray-100 text-black font-black border-2 border-black rounded-xl">
-                <Download className="w-5 h-5 mr-2" />
-                Export
-              </Button>
               <Button
                 onClick={() => setShowUploadModal(true)}
                 className="bg-white hover:bg-gray-100 text-black font-black border-2 border-black rounded-xl"
@@ -361,17 +356,6 @@ export default function QuestionPapersPage() {
           </CardContent>
         </Card>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-green-500 border-2 border-white rounded-xl p-6 text-center hover:bg-green-600 transition-colors">
-            <FileText className="w-10 h-10 text-white mx-auto mb-3" />
-            <div className="text-4xl font-black text-white">
-              {questionPapers.length}
-            </div>
-            <div className="text-sm font-bold text-green-100">Total Papers</div>
-          </Card>
-        </div>
-
         {/* Question Papers List */}
         <Card className="bg-white border-2 border-green-500 rounded-2xl">
           <CardHeader>
@@ -403,8 +387,8 @@ export default function QuestionPapersPage() {
                         </span>
                       </div>
                       <div className="text-center">
-                        <span className="bg-white border-2 border-gray-300 text-gray-700 px-3 py-1 font-black text-sm rounded-lg">
-                          {paper.subject} - {paper.grade}
+                        <span className="bg-white border-2 border-gray-300 text-gray-700 px-3 py-1 font-black text-sm rounded-lg text-wrap">
+                          {paper.grade}
                         </span>
                       </div>
                       <div className="text-center">
@@ -428,12 +412,17 @@ export default function QuestionPapersPage() {
                       </div>
                       <div className="text-center">
                         <p className="font-semibold text-gray-700 text-sm">
-                          {(() => {
-                            const d = new Date(paper.createdAt);
-                            return isNaN(d.getTime())
-                              ? "—"
-                              : d.toISOString().split("T")[0];
-                          })()}
+                          {paper.createdAt.split("T")[0]}
+                        </p>
+                        <p className="text-gray-700 font-bold text-xs mt-1">
+                          {new Date(paper.createdAt).toLocaleTimeString(
+                            "en-US",
+                            {
+                              hour: "numeric",
+                              minute: "2-digit",
+                              hour12: true,
+                            }
+                          )}
                         </p>
                       </div>
                       <div className="flex">
@@ -539,10 +528,6 @@ function UploadPaperModal({
   teachers: any;
   batches: any;
 }) {
-  console.log(formData);
-  batches.map((batch: any) => {
-    console.log(batch);
-  });
   const filteredBatches = batches.filter(
     (batch: any) =>
       (formData.grade === "" && formData.subject === "") ||
@@ -560,9 +545,7 @@ function UploadPaperModal({
 
   const handleBatchToggle = (batch: string) => {
     console.log("Initial formData -> ", formData.assignedTo);
-    console.log(batch);
     if (formData.assignedTo.includes(batch)) {
-      console.log("Inside formData includes");
       setFormData({
         ...formData,
         assignedTo: formData.assignedTo.filter((b: string) => b !== batch),
@@ -617,6 +600,13 @@ function UploadPaperModal({
       return new Response("Internal Server Error", { status: 500 });
     }
   };
+
+  useEffect(() => {
+    setFormData((prev: any) => ({
+      ...prev,
+      assignedTo: [],
+    }));
+  }, [formData.grade, formData.subject]);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -1263,39 +1253,41 @@ function ViewPaperModal({
               </div>
               <div className="bg-gray-50 p-4 rounded-xl border-2 border-gray-200 text-wrap">
                 <h3 className="font-black text-black mb-2">View question</h3>
-                {/* <button
+                <button
+                  className="bg-green-100 border-2 border-green-300 text-green-700 px-3 py-1 font-black text-sm rounded-lg"
                   onClick={() =>
-                    (window.location.href = `${assignment.questionPaperLink}`)
+                    window.open(
+                      assignment.questionPaperLink,
+                      "_blank",
+                      "noopener,noreferrer"
+                    )
                   }
                 >
                   Click here
-                </button> */}
-                <img src={assignment.questionPaperLink + ".jpg"} />
+                </button>
+                {/* Assignment List */}
+                <div>
+                  <h3 className="font-black text-black mt-4">
+                    Students in Batch ({assignment.assignedTo.length})
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 ml-5">
+                    {Array.isArray(displayedBatches.batchData) &&
+                      assignment.assignedTo.map((a: any) => {
+                        const batch = displayedBatches.batchData.find(
+                          (batch: any) => batch._id === a
+                        );
+                        return (
+                          <li key={a}>
+                            {batch
+                              ? batch.name
+                              : "Batch info not available (please refresh)"}
+                          </li>
+                        );
+                      })}
+                  </div>
+                </div>
               </div>
             </div>
-
-            {/* Assignment List */}
-            <div>
-              <h3 className="font-black text-black mb-4">
-                Students in Batch ({assignment.assignedTo.length})
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {Array.isArray(displayedBatches.batchData) &&
-                  assignment.assignedTo.map((a: any) => {
-                    const batch = displayedBatches.batchData.find(
-                      (batch: any) => batch._id === a
-                    );
-                    return (
-                      <li key={a}>
-                        {batch
-                          ? batch.name
-                          : "Batch info not available (please refresh)"}
-                      </li>
-                    );
-                  })}
-              </div>
-            </div>
-
             <div className="flex justify-end">
               <Button
                 onClick={onClose}
