@@ -271,7 +271,7 @@ export default function TeacherDashboard() {
           <Card className="bg-gradient-to-br from-white to-gray-50 border-2 border-green-500 rounded-2xl shadow-lg p-6 text-center">
             <TrendingUp className="w-8 h-8 text-green-600 mx-auto mb-3" />
             <div className="text-3xl font-black text-black">
-              {/* {questionPapers.filter((a) => a.status === "Active").length} */}
+              {questionPapers.filter((a) => a.isSubmissionOpen).length}
             </div>
             <div className="text-sm font-semibold text-gray-600">
               Active Assignments
@@ -330,7 +330,10 @@ export default function TeacherDashboard() {
                             {paper.title}
                           </h3>
                           <p className="font-semibold text-gray-600 mb-1">
-                            Batches: {displayedBatches[paper._id].sort().map((batch:any)=>batch + " ")}
+                            Batches:{" "}
+                            {displayedBatches[paper._id]
+                              .sort()
+                              .map((batch: any) => batch + " ")}
                           </p>
                         </div>
                         <div className="text-center">
@@ -339,8 +342,8 @@ export default function TeacherDashboard() {
                           </span>
                         </div>
                         <div className="text-center">
-                          <span className="bg-white border-2 border-gray-300 text-gray-700 px-3 py-1 font-black text-sm rounded-lg">
-                            {paper.subject} - {paper.grade}
+                          <span className="bg-white border-2 border-gray-300 text-gray-700 px-3 py-1 font-black text-sm rounded-lg text-wrap">
+                            {paper.grade}
                           </span>
                         </div>
                         <div className="text-center">
