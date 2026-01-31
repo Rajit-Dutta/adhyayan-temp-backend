@@ -19,92 +19,14 @@ import {
 import { useRouter } from "next/navigation";
 import axios from "axios";
 
-// Mock assignments data for each teacher
-const TEACHER_ASSIGNMENTS = {
-  T001: [
-    {
-      id: 1,
-      title: "Algebra Fundamentals",
-      subject: "Mathematics",
-      dueDate: "2024-01-15",
-      status: "Active",
-      submittedCount: 18,
-      totalStudents: 25,
-      gradedCount: 12,
-      classes: ["10A", "10B"],
-    },
-    {
-      id: 2,
-      title: "Quadratic Equations",
-      subject: "Mathematics",
-      dueDate: "2024-01-20",
-      status: "Draft",
-      submittedCount: 0,
-      totalStudents: 30,
-      gradedCount: 0,
-      classes: ["9A"],
-    },
-  ],
-  T002: [
-    {
-      id: 3,
-      title: "Chemical Reactions Lab",
-      subject: "Science",
-      dueDate: "2024-01-12",
-      status: "Completed",
-      submittedCount: 22,
-      totalStudents: 22,
-      gradedCount: 22,
-      classes: ["9A", "9B"],
-    },
-    {
-      id: 4,
-      title: "Physics Motion Study",
-      subject: "Science",
-      dueDate: "2024-01-18",
-      status: "Active",
-      submittedCount: 15,
-      totalStudents: 28,
-      gradedCount: 8,
-      classes: ["10A"],
-    },
-  ],
-  T003: [
-    {
-      id: 5,
-      title: "Shakespeare Essay",
-      subject: "English",
-      dueDate: "2024-01-22",
-      status: "Active",
-      submittedCount: 20,
-      totalStudents: 25,
-      gradedCount: 15,
-      classes: ["11A", "11B"],
-    },
-  ],
-  T004: [
-    {
-      id: 6,
-      title: "World War II Analysis",
-      subject: "History",
-      dueDate: "2024-01-25",
-      status: "Active",
-      submittedCount: 12,
-      totalStudents: 20,
-      gradedCount: 5,
-      classes: ["10B", "11A"],
-    },
-  ],
-};
-
 type QuestionPaper = {
-  _id: number;
+  _id: string;
   title: string;
   subject: string;
   grade: string;
   createdAt: string;
   assignedBy: string;
-  assignedTo?: string[];
+  assignedTo: string[];
   totalMarks?: number;
   isSubmissionInClass?: boolean;
   isSubmissionOpen?: boolean;
@@ -114,7 +36,6 @@ type QuestionPaper = {
 export default function TeacherDashboard() {
   const router = useRouter();
   const [teacher, setTeacher] = useState<any>(null);
-  const [assignments, setAssignments] = useState<any[]>([]);
   const [questionPapers, setQuestionPapers] = useState<QuestionPaper[]>([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
@@ -125,7 +46,7 @@ export default function TeacherDashboard() {
   const [teacherEmailID, setTeacherEmailID] = useState<any[]>([]);
   const [teacherName, setTeacherName] = useState<any[]>([]);
   const [displayedBatches, setDisplayedBatches] = useState<{
-    [key: string]: string;
+    [key: string]: string[];
   }>({});
   const [displayedTeacher, setDisplayedTeacher] = useState<{
     [key: string]: string;
@@ -145,7 +66,13 @@ export default function TeacherDashboard() {
   useEffect(() => {
     fetchTeacherData();
     fetchQuestionPaperDetails();
-  }, [router, teacherEmailID, teacherName]);
+  }, []);
+
+  useEffect(() => {
+    if (questionPapers.length > 0) {
+      questionPapers.map((paper: QuestionPaper) => fetchBatchNames(paper._id));
+    }
+  }, [questionPapers]);
 
   const fetchTeacherData = async () => {
     try {
@@ -153,7 +80,7 @@ export default function TeacherDashboard() {
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/getUserType`,
         {
           withCredentials: true,
-        }
+        },
       );
 
       const { userType, fullName, email } = userRes.data.jwtDecoded;
@@ -168,18 +95,13 @@ export default function TeacherDashboard() {
 
       // Step 2: Get teacher data using email
       const teacherRes = await axios.get(
-        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getTeacherData`
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getTeacherData`,
       );
 
       console.log(teacherEmailID);
 
       const teacherPayload = teacherRes.data;
       setTeacher(teacherPayload); // Assuming this is the parsed object already
-      setAssignments(
-        TEACHER_ASSIGNMENTS[
-          teacherPayload._id as keyof typeof TEACHER_ASSIGNMENTS
-        ] || []
-      );
     } catch (error) {
       console.error("Error during teacher dashboard data fetch:", error);
       router.push("/");
@@ -194,7 +116,7 @@ export default function TeacherDashboard() {
           params: {
             email: teacherEmailID,
           },
-        }
+        },
       );
       console.log("Here at 199 -> ", teacherEmailID);
       const assignmentData = response.data;
@@ -202,6 +124,36 @@ export default function TeacherDashboard() {
       console.log(assignmentData);
     } catch (error) {
       console.error("Error in fetching assignment details:", error);
+    }
+  };
+
+  const fetchBatchNames = async (assignmentID: string) => {
+    try {
+      const paper = questionPapers.find(
+        (paper: QuestionPaper) => paper._id === assignmentID,
+      );
+
+      if (!paper || !paper.assignedTo) return;
+
+      const batchNames = await Promise.all(
+        paper.assignedTo.map(async (batchId: string) => {
+          const response = await axios.get(
+            `${process.env.NEXT_PUBLIC_DOMAIN}/api/getBatchFromAssignment`,
+            {
+              params: { assignedTo: batchId },
+            },
+          );
+
+          return response.data.assignedToData.name;
+        }),
+      );
+
+      setDisplayedBatches((prev) => ({
+        ...prev,
+        [assignmentID]: batchNames,
+      }));
+    } catch (error) {
+      console.error("Error in fetching batch names:", error);
     }
   };
 
@@ -242,19 +194,19 @@ export default function TeacherDashboard() {
     setShowEditModal(true);
   };
 
-  const handleDeleteBatch = async (assignmentId: number) => {
+  const handleDeleteBatch = async (assignmentId: string) => {
     if (confirm("Are you sure you want to delete this assignment?")) {
       try {
         const response = await axios.delete(
           `${process.env.NEXT_PUBLIC_DOMAIN}/api/assignment/deleteAssignment`,
           {
             params: { id: assignmentId },
-          }
+          },
         );
         console.log("Assignment deleted successfully:", response.data);
 
         setQuestionPapers((prevAssgn) =>
-          prevAssgn.filter((assignment) => assignment._id !== assignmentId)
+          prevAssgn.filter((assignment) => assignment._id !== assignmentId),
         );
       } catch (error) {
         console.error("Error deleting batch:", error);
@@ -262,6 +214,8 @@ export default function TeacherDashboard() {
       }
     }
   };
+
+  console.log("Displayed batches: ", displayedBatches);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black p-6">
@@ -302,12 +256,12 @@ export default function TeacherDashboard() {
           {/* Stats Cards - Bento Style */}
           <Card
             className={`bg-gradient-to-br ${getSubjectColor(
-              teacher.subject
+              teacher.subject,
             )} border-2 border-white rounded-2xl shadow-lg p-6 text-center`}
           >
             <BookOpen className="w-8 h-8 text-white mx-auto mb-3" />
             <div className="text-3xl font-black text-white">
-              {assignments.length}
+              {questionPapers.length}
             </div>
             <div className="text-sm font-semibold text-white/90">
               Total Assignments
@@ -317,7 +271,7 @@ export default function TeacherDashboard() {
           <Card className="bg-gradient-to-br from-white to-gray-50 border-2 border-green-500 rounded-2xl shadow-lg p-6 text-center">
             <TrendingUp className="w-8 h-8 text-green-600 mx-auto mb-3" />
             <div className="text-3xl font-black text-black">
-              {assignments.filter((a) => a.status === "Active").length}
+              {/* {questionPapers.filter((a) => a.status === "Active").length} */}
             </div>
             <div className="text-sm font-semibold text-gray-600">
               Active Assignments
@@ -327,7 +281,7 @@ export default function TeacherDashboard() {
           <Card className="bg-gradient-to-br from-green-500 to-green-600 border-2 border-white rounded-2xl shadow-lg p-6 text-center">
             <Users className="w-8 h-8 text-white mx-auto mb-3" />
             <div className="text-3xl font-black text-white">
-              {assignments.reduce((sum, a) => sum + a.submittedCount, 0)}
+              {/* {assignments.reduce((sum, a) => sum + a.submittedCount, 0)} */}
             </div>
             <div className="text-sm font-semibold text-white/90">
               Submissions
@@ -337,7 +291,7 @@ export default function TeacherDashboard() {
           <Card className="bg-gradient-to-br from-white to-gray-50 border-2 border-green-500 rounded-2xl shadow-lg p-6 text-center">
             <Clock className="w-8 h-8 text-green-600 mx-auto mb-3" />
             <div className="text-3xl font-black text-black">
-              {assignments.reduce((sum, a) => sum + a.gradedCount, 0)}
+              {/* {assignments.reduce((sum, a) => sum + a.gradedCount, 0)} */}
             </div>
             <div className="text-sm font-semibold text-gray-600">Graded</div>
           </Card>
@@ -376,7 +330,7 @@ export default function TeacherDashboard() {
                             {paper.title}
                           </h3>
                           <p className="font-semibold text-gray-600 mb-1">
-                            Teacher: {paper.assignedBy}
+                            Batches: {displayedBatches[paper._id].sort().map((batch:any)=>batch + " ")}
                           </p>
                         </div>
                         <div className="text-center">
@@ -477,8 +431,8 @@ export default function TeacherDashboard() {
             onSave={(updatedBatch) => {
               setBatches(
                 batches.map((b) =>
-                  b.id === updatedBatch.id ? updatedBatch : b
-                )
+                  b.id === updatedBatch.id ? updatedBatch : b,
+                ),
               );
               setShowEditModal(false);
               setSelectedAssignment(null);
@@ -564,13 +518,13 @@ function UploadPaperModal({
     newAssignment.append("isSubmissionOpen", formData.isSubmissionOpen);
     newAssignment.append(
       "questionPaperLink",
-      formData.questionPaperLink as File
+      formData.questionPaperLink as File,
     );
 
     try {
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/assignment/createAssignment`,
-        newAssignment
+        newAssignment,
       );
       console.log("Successfully created assignment -> ", response.data);
       onSave(response.data);
@@ -854,14 +808,14 @@ function EditPaperModal({
 
   const [selectedBatches, setSelectedBatches] = useState(
     availableBatches.batchData.filter((b: any) =>
-      assignment.assignedTo.includes(b._id)
-    )
+      assignment.assignedTo.includes(b._id),
+    ),
   );
 
   console.log("formData -> ", formData);
 
   const filteredBatches = availableBatches.batchData.filter(
-    (batch: any) => formData.grade === "" || batch.standard === formData.grade
+    (batch: any) => formData.grade === "" || batch.standard === formData.grade,
   );
 
   console.log("Available batches -> ", availableBatches);
@@ -872,7 +826,7 @@ function EditPaperModal({
 
     if (isSelected) {
       setSelectedBatches((prev: any[]) =>
-        prev.filter((s: any) => s._id !== batch._id)
+        prev.filter((s: any) => s._id !== batch._id),
       );
     } else {
       setSelectedBatches((prev: any) => [...prev, batch]);
@@ -889,24 +843,24 @@ function EditPaperModal({
     updateAssignment.append("grade", formData.grade);
     updateAssignment.append(
       "createdDate",
-      new Date().toISOString().split("T")[0]
+      new Date().toISOString().split("T")[0],
     );
     updateAssignment.append("assignedTo", JSON.stringify(selectedBatches));
     updateAssignment.append("assignedBy", formData.assignedBy);
     updateAssignment.append("totalMarks", formData.totalMarks);
     updateAssignment.append(
       "isSubmissionInClass",
-      formData.isSubmissionInClass
+      formData.isSubmissionInClass,
     );
     updateAssignment.append("isSubmissionOpen", formData.isSubmissionOpen);
     updateAssignment.append(
       "questionPaperLink",
-      formData.questionPaperLink as File
+      formData.questionPaperLink as File,
     );
     try {
       const response = await axios.put(
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/assignment/updateAssignment`,
-        updateAssignment
+        updateAssignment,
       );
       console.log("Successfully created assignment -> ", response.data);
       onSave(updateAssignment);
@@ -1031,7 +985,7 @@ function EditPaperModal({
               <div className="border-2 border-black rounded-xl p-4 max-h-32 overflow-y-auto bg-white">
                 {filteredBatches.map((batch: any) => {
                   const isSelected = selectedBatches.some(
-                    (b: any) => b._id === batch._id
+                    (b: any) => b._id === batch._id,
                   );
 
                   return (
@@ -1243,7 +1197,7 @@ function ViewPaperModal({
                 {Array.isArray(displayedBatches.batchData) &&
                   assignment.assignedTo.map((a: any) => {
                     const batch = displayedBatches.batchData.find(
-                      (batch: any) => batch._id === a
+                      (batch: any) => batch._id === a,
                     );
                     return (
                       <li key={a}>
