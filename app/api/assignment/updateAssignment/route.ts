@@ -1,14 +1,13 @@
 import { dbConnect } from "@/lib/db";
-import cloudinary from "@/lib/config";
 import assignmentModel from "@/models/Assignment";
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
+import { createClient } from "@supabase/supabase-js";
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+export const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!,
+);
 
 export async function PUT(request: NextRequest) {
   try {
@@ -35,35 +34,32 @@ export async function PUT(request: NextRequest) {
     if (!existingAssignment) {
       return NextResponse.json(
         { error: "Assignment not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
-    let questionPaperLink= existingAssignment.questionPaperLink;
+    let questionPaperLink = existingAssignment.questionPaperLink;
 
-    if (file && file.size > 0) {
-      const fileNameWithoutExtension = path.parse(file.name).name;
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const uploadResult = await new Promise((resolve, reject) => {
-        cloudinary.uploader
-          .upload_stream(
-            {
-              resource_type: file.type === "application/pdf" ? "image" : "auto",
-              folder: "question-bank",
-              public_id: fileNameWithoutExtension,
-              use_filename: true,
-              unique_filename: true,
-            },
-            (error, result) => {
-              if (error) return reject(error);
-              resolve(result);
-            }
-          )
-          .end(buffer);
-      });
+    const dateTime = new Date().toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
 
-      questionPaperLink = (uploadResult as any).secure_url;
+    const filePath = `questionPapers/${file.name}-${dateTime}`;
+    const { error } = await supabase.storage
+      .from("Adhyayan-Backend")
+      .upload(filePath, file);
+
+    if (error) {
+      console.error("Error uploading image: ", error);
+      return null;
     }
+
+    const { data } = supabase.storage
+      .from("Adhyayan-Backend")
+      .getPublicUrl(filePath);
+
     const _id = existingAssignment._id;
     const updatedAssignment = await assignmentModel.findByIdAndUpdate(
       _id,
@@ -74,23 +70,25 @@ export async function PUT(request: NextRequest) {
         assignedTo,
         assignedBy,
         totalMarks,
-        questionPaperLink,
+        questionPaperLink: data.publicUrl,
         isSubmissionInClass,
         isSubmissionOpen,
+        submitCount: 0,
+        checkCount: 0,
       },
-      { new: true }
+      { new: true },
     );
 
     if (!updatedAssignment) {
       return NextResponse.json(
         { error: "Assignment not found" },
-        { status: 404 }
+        { status: 404 },
       );
     }
     // ✅ Send back the updated asssignment
     return NextResponse.json(
       { message: "Assignment updated successfully", updatedAssignment },
-      { status: 200 }
+      { status: 200 },
     );
   } catch (error) {
     console.error("Error in updating an assignment:", error);

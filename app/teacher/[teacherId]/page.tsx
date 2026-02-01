@@ -28,6 +28,8 @@ type QuestionPaper = {
   assignedBy: string;
   assignedTo: string[];
   totalMarks?: number;
+  submitCount: number;
+  checkCount: number;
   isSubmissionInClass?: boolean;
   isSubmissionOpen?: boolean;
   questionPaperLink?: string;
@@ -43,7 +45,7 @@ export default function TeacherDashboard() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [batches, setBatches] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
-  const [teacherEmailID, setTeacherEmailID] = useState<any[]>([]);
+  const [teacherEmailID, setTeacherEmailID] = useState<string[]>([]);
   const [teacherName, setTeacherName] = useState<any[]>([]);
   const [displayedBatches, setDisplayedBatches] = useState<{
     [key: string]: string[];
@@ -65,12 +67,13 @@ export default function TeacherDashboard() {
 
   useEffect(() => {
     fetchTeacherData();
-    fetchQuestionPaperDetails();
   }, []);
 
   useEffect(() => {
     if (questionPapers.length > 0) {
-      questionPapers.map((paper: QuestionPaper) => fetchBatchNames(paper._id));
+      questionPapers.forEach((paper: QuestionPaper) =>
+        fetchBatchNames(paper._id),
+      );
     }
   }, [questionPapers]);
 
@@ -87,6 +90,9 @@ export default function TeacherDashboard() {
       setTeacherEmailID(email);
       setTeacherName(fullName);
       console.log(fullName);
+      console.log(email);
+
+      fetchQuestionPaperDetails(email);
 
       if (userType !== "teacher") {
         router.push("/");
@@ -98,8 +104,6 @@ export default function TeacherDashboard() {
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/getTeacherData`,
       );
 
-      console.log(teacherEmailID);
-
       const teacherPayload = teacherRes.data;
       setTeacher(teacherPayload); // Assuming this is the parsed object already
     } catch (error) {
@@ -108,19 +112,20 @@ export default function TeacherDashboard() {
     }
   };
 
-  const fetchQuestionPaperDetails = async () => {
+  const fetchQuestionPaperDetails = async (teacherEmail: string[]) => {
     try {
+      console.log("Here at 119 -> ", teacherEmail);
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/assignment/getAssignmentWRTTeacher`,
         {
           params: {
-            email: teacherEmailID,
+            email: teacherEmail,
           },
         },
       );
-      console.log("Here at 199 -> ", teacherEmailID);
       const assignmentData = response.data;
       setQuestionPapers(assignmentData);
+      await fetchingTeacherAndBatchDisplayDetails(assignmentData);
       console.log(assignmentData);
     } catch (error) {
       console.error("Error in fetching assignment details:", error);
@@ -148,12 +153,57 @@ export default function TeacherDashboard() {
         }),
       );
 
+      console.log("Batch names: ", batchNames, assignmentID);
+
       setDisplayedBatches((prev) => ({
         ...prev,
         [assignmentID]: batchNames,
       }));
     } catch (error) {
       console.error("Error in fetching batch names:", error);
+    }
+  };
+
+  const fetchingTeacherAndBatchDisplayDetails = async (
+    assignmentData: any[],
+  ) => {
+    try {
+      // 🔹 Fetch teacher names
+      const teacherPromises = assignmentData.map(() =>
+        axios.get(
+          `${process.env.NEXT_PUBLIC_DOMAIN}/api/teacher/getTeacherNames`,
+        ),
+      );
+      const teacherResponses = await Promise.all(teacherPromises);
+      setDisplayedTeacher(teacherResponses[0].data);
+
+      // 🔹 Gather all unique batch IDs
+      const allBatchIds = [
+        ...new Set(
+          assignmentData.flatMap((assignment) =>
+            assignment.assignedTo.map((id: any) => String(id)),
+          ),
+        ),
+      ];
+
+      // 🔹 Fetch student name map
+      const batchRes = await axios.get(
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getBatchData`,
+        {
+          params: {
+            batchIds: allBatchIds,
+          },
+          paramsSerializer: (params) =>
+            params.batchIds.map((id: string) => `batchIds=${id}`).join("&"),
+        },
+      );
+
+      setBatches(batchRes.data); // a map { studentId: "Name" }
+    } catch (error) {
+      console.error(
+        "Error in fetching teacher or batch display details:",
+        error,
+      );
     }
   };
 
@@ -216,6 +266,7 @@ export default function TeacherDashboard() {
   };
 
   console.log("Displayed batches: ", displayedBatches);
+  console.log("Displayed teachers: ", displayedTeacher);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black p-6">
@@ -281,7 +332,7 @@ export default function TeacherDashboard() {
           <Card className="bg-gradient-to-br from-green-500 to-green-600 border-2 border-white rounded-2xl shadow-lg p-6 text-center">
             <Users className="w-8 h-8 text-white mx-auto mb-3" />
             <div className="text-3xl font-black text-white">
-              {/* {assignments.reduce((sum, a) => sum + a.submittedCount, 0)} */}
+              {questionPapers.reduce((sum, a) => sum + a.submitCount, 0)}
             </div>
             <div className="text-sm font-semibold text-white/90">
               Submissions
@@ -291,7 +342,7 @@ export default function TeacherDashboard() {
           <Card className="bg-gradient-to-br from-white to-gray-50 border-2 border-green-500 rounded-2xl shadow-lg p-6 text-center">
             <Clock className="w-8 h-8 text-green-600 mx-auto mb-3" />
             <div className="text-3xl font-black text-black">
-              {/* {assignments.reduce((sum, a) => sum + a.gradedCount, 0)} */}
+              {questionPapers.reduce((sum, a) => sum + a.checkCount, 0)}
             </div>
             <div className="text-sm font-semibold text-gray-600">Graded</div>
           </Card>
@@ -330,10 +381,11 @@ export default function TeacherDashboard() {
                             {paper.title}
                           </h3>
                           <p className="font-semibold text-gray-600 mb-1">
-                            Batches:{" "}
-                            {displayedBatches[paper._id]
-                              .sort()
-                              .map((batch: any) => batch + " ")}
+                            Batch{paper.assignedTo?.length === 1 ? "" : "es"}:{" "}
+                            {displayedBatches[paper._id] &&
+                            displayedBatches[paper._id].length > 0
+                              ? displayedBatches[paper._id].sort().join(", ")
+                              : "Loading..."}
                           </p>
                         </div>
                         <div className="text-center">
@@ -346,12 +398,20 @@ export default function TeacherDashboard() {
                             {paper.grade}
                           </span>
                         </div>
-                        <div className="text-center">
+                        {/* <div className="text-center">
                           <div className="text-2xl font-black text-green-600">
                             {paper.assignedTo?.length}
                           </div>
                           <div className="text-sm font-semibold text-gray-600">
                             Batch{paper.assignedTo?.length === 1 ? "" : "es"}
+                          </div>
+                        </div> */}
+                        <div className="text-center">
+                          <div className="text-2xl font-black text-green-600">
+                            {paper.checkCount} / {paper.submitCount}
+                          </div>
+                          <div className="text-sm font-semibold text-gray-600">
+                            checked
                           </div>
                         </div>
                         <div className="text-center">
@@ -440,8 +500,8 @@ export default function TeacherDashboard() {
               setShowEditModal(false);
               setSelectedAssignment(null);
             }}
-            teachers={teachers}
-            availableBatches={displayedBatches}
+            teachers={displayedTeacher}
+            availableBatches={batches}
           />
         )}
 
@@ -454,7 +514,7 @@ export default function TeacherDashboard() {
               setSelectedAssignment(null);
             }}
             displayedTeacher={displayedTeacher}
-            displayedBatches={displayedBatches}
+            displayedBatches={batches}
           />
         )}
       </div>
@@ -816,6 +876,7 @@ function EditPaperModal({
   );
 
   console.log("formData -> ", formData);
+  console.log("teachers -> ", teachers);
 
   const filteredBatches = availableBatches.batchData.filter(
     (batch: any) => formData.grade === "" || batch.standard === formData.grade,
@@ -823,6 +884,7 @@ function EditPaperModal({
 
   console.log("Available batches -> ", availableBatches);
   console.log("Filtered batches -> ", filteredBatches);
+  console.log("Displayed teacher -> ", teachers);
 
   const handleBatchToggleEdit = (batch: any) => {
     const isSelected = selectedBatches.some((b: any) => b._id === batch._id);
@@ -860,6 +922,7 @@ function EditPaperModal({
       "questionPaperLink",
       formData.questionPaperLink as File,
     );
+    console.log("Update assignment: ",updateAssignment);
     try {
       const response = await axios.put(
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/assignment/updateAssignment`,
@@ -878,10 +941,10 @@ function EditPaperModal({
         <CardHeader>
           <CardTitle className="text-3xl font-black text-black flex items-center">
             <Plus className="w-8 h-8 mr-4 text-green-600" />
-            EDIT QUESTION PAPER
+            UPLOAD QUESTION PAPER
           </CardTitle>
           <p className="text-gray-600 font-bold text-lg">
-            Edit your question paper
+            Create and assign a new question paper
           </p>
         </CardHeader>
         <CardContent>
@@ -894,10 +957,13 @@ function EditPaperModal({
                 </label>
                 <input
                   type="text"
+                  value={formData.title}
+                  onChange={(e) =>
+                    setFormData({ ...formData, title: e.target.value })
+                  }
                   className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400"
                   placeholder="Enter question paper title"
                   required
-                  defaultValue={formData.title}
                 />
               </div>
 
@@ -943,16 +1009,78 @@ function EditPaperModal({
                   <option value="12th">12th</option>
                 </select>
               </div>
-
+              <div className="flex justify-center items-center flex-col">
+                <div className="w-full">
+                  <label className="block text-sm font-black text-black mb-2">
+                    Total Marks *
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.totalMarks}
+                    onChange={(e) =>
+                      setFormData({ ...formData, totalMarks: e.target.value })
+                    }
+                    className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400"
+                    placeholder="Enter total marks"
+                    min="1"
+                    required
+                  />
+                </div>
+                <div className="w-full mt-5">
+                  <label className="block text-sm font-black text-black mb-2">
+                    Assigned By *
+                  </label>
+                  <select
+                    value={formData.assignedBy}
+                    onChange={(e) =>
+                      setFormData({ ...formData, assignedBy: e.target.value })
+                    }
+                    className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                    required
+                  >
+                    <option value="">Select Teacher</option>
+                    {teachers.map((teacher: any) => (
+                      <option key={teacher._id} value={teacher._id}>
+                        {teacher.fullName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              {/* Assignment Information */}
+              <div className="flex justify-start items-start flex-col">
+                <label className="block text-sm font-black text-black mb-2">
+                  Assign to *
+                </label>
+                <select
+                  multiple
+                  className="border-2 border-black rounded-xl w-full p-4 max-h-40 overflow-y-auto bg-white"
+                >
+                  {filteredBatches.map((batch: any) => (
+                    <option
+                      key={batch._id}
+                      value={batch._id}
+                      onClick={() => handleBatchToggleEdit(batch)}
+                      className={`p-3 mb-3 border-2 rounded-lg cursor-pointer transition-all text-sm font-bold ${
+                        formData.assignedTo.includes(batch._id)
+                          ? "bg-green-100 border-green-500 text-green-700"
+                          : "bg-gray-50 border-gray-300 hover:bg-gray-100"
+                      }`}
+                    >
+                      {batch.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="block text-sm font-black text-black mb-2">
-                  Total Marks *
+                  Checked Count
                 </label>
                 <input
                   type="number"
-                  value={formData.totalMarks}
+                  value={formData.checkCount}
                   onChange={(e) =>
-                    setFormData({ ...formData, totalMarks: e.target.value })
+                    setFormData({ ...formData, checkCount: e.target.value })
                   }
                   className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400"
                   placeholder="Enter total marks"
@@ -960,52 +1088,22 @@ function EditPaperModal({
                   required
                 />
               </div>
-            </div>
 
-            {/* Assignment Information */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-black text-black mb-2">
-                  Assigned By *
+                  Submit Count
                 </label>
-                <select
-                  value={formData.assignedBy}
+                <input
+                  type="number"
+                  value={formData.submitCount}
                   onChange={(e) =>
-                    setFormData({ ...formData, assignedBy: e.target.value })
+                    setFormData({ ...formData, submitCount: e.target.value })
                   }
-                  className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                  className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400"
+                  placeholder="Enter total marks"
+                  min="1"
                   required
-                >
-                  <option value="">Select Teacher</option>
-                  {teachers.map((teacher: any) => (
-                    <option key={teacher._id} value={teacher._id}>
-                      {teacher.fullName}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="border-2 border-black rounded-xl p-4 max-h-32 overflow-y-auto bg-white">
-                {filteredBatches.map((batch: any) => {
-                  const isSelected = selectedBatches.some(
-                    (b: any) => b._id === batch._id,
-                  );
-
-                  return (
-                    <div
-                      key={batch._id}
-                      onClick={() => handleBatchToggleEdit(batch)}
-                      className={`border w-1/4 rounded m-2 p-2 cursor-pointer transition ${
-                        isSelected ? "bg-green-200" : "bg-white"
-                      }`}
-                    >
-                      <div className="font-semibold">{batch.name}</div>
-                      <div className="text-sm text-gray-600">
-                        {batch.standard}
-                      </div>
-                    </div>
-                  );
-                })}
+                />
               </div>
             </div>
 
@@ -1089,8 +1187,6 @@ function EditPaperModal({
                     <div className="font-black text-gray-700 text-lg">
                       {formData.questionPaperLink
                         ? formData.questionPaperLink.name
-                          ? formData.questionPaperLink.name
-                          : formData.questionPaperLink.split("/").pop()
                         : "Click to upload or drag and drop"}
                     </div>
                     <div className="text-sm font-bold text-gray-500">
@@ -1180,39 +1276,41 @@ function ViewPaperModal({
               </div>
               <div className="bg-gray-50 p-4 rounded-xl border-2 border-gray-200 text-wrap">
                 <h3 className="font-black text-black mb-2">View question</h3>
-                {/* <button
+                <button
+                  className="bg-green-100 border-2 border-green-300 text-green-700 px-3 py-1 font-black text-sm rounded-lg"
                   onClick={() =>
-                    (window.location.href = `${assignment.questionPaperLink}`)
+                    window.open(
+                      assignment.questionPaperLink,
+                      "_blank",
+                      "noopener,noreferrer",
+                    )
                   }
                 >
                   Click here
-                </button> */}
-                <img src={assignment.questionPaperLink + ".jpg"} />
+                </button>
+                {/* Assignment List */}
+                <div>
+                  <h3 className="font-black text-black mt-4">
+                    InvolvingBatch ({assignment.assignedTo.length})
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 ml-5">
+                    {Array.isArray(displayedBatches.batchData) &&
+                      assignment.assignedTo.map((a: any) => {
+                        const batch = displayedBatches.batchData.find(
+                          (batch: any) => batch._id === a,
+                        );
+                        return (
+                          <li key={a}>
+                            {batch
+                              ? batch.name
+                              : "Batch info not available (please refresh)"}
+                          </li>
+                        );
+                      })}
+                  </div>
+                </div>
               </div>
             </div>
-
-            {/* Assignment List */}
-            <div>
-              <h3 className="font-black text-black mb-4">
-                Students in Batch ({assignment.assignedTo.length})
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {Array.isArray(displayedBatches.batchData) &&
-                  assignment.assignedTo.map((a: any) => {
-                    const batch = displayedBatches.batchData.find(
-                      (batch: any) => batch._id === a,
-                    );
-                    return (
-                      <li key={a}>
-                        {batch
-                          ? batch.name
-                          : "Batch info not available (please refresh)"}
-                      </li>
-                    );
-                  })}
-              </div>
-            </div>
-
             <div className="flex justify-end">
               <Button
                 onClick={onClose}

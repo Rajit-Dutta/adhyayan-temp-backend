@@ -5,7 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 
 export const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!,
 );
 
 export async function POST(req: NextRequest) {
@@ -62,6 +62,8 @@ export async function POST(req: NextRequest) {
         questionPaperLink: data.publicUrl,
         isSubmissionInClass,
         isSubmissionOpen,
+        submitCount: 0,
+        checkCount: 0,
       });
 
       const savedAssignment = await newAssignment.save();
@@ -78,9 +80,11 @@ export async function POST(req: NextRequest) {
           questionPaperLink: data.publicUrl,
           isSubmissionInClass,
           isSubmissionOpen,
+          submitCount: 0,
+          checkCount: 0,
           createdAt: new Date().toISOString(),
         },
-        { status: 200 }
+        { status: 200 },
       );
     } catch (error) {
       console.error("Upload failed", error);

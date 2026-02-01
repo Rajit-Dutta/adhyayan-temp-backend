@@ -884,14 +884,14 @@ function EditPaperModal({
 
   const [selectedBatches, setSelectedBatches] = useState(
     availableBatches.batchData.filter((b: any) =>
-      assignment.assignedTo.includes(b._id)
-    )
+      assignment.assignedTo.includes(b._id),
+    ),
   );
 
   console.log("formData -> ", formData);
 
   const filteredBatches = availableBatches.batchData.filter(
-    (batch: any) => formData.grade === "" || batch.standard === formData.grade
+    (batch: any) => formData.grade === "" || batch.standard === formData.grade,
   );
 
   console.log("Available batches -> ", availableBatches);
@@ -902,7 +902,7 @@ function EditPaperModal({
 
     if (isSelected) {
       setSelectedBatches((prev: any[]) =>
-        prev.filter((s: any) => s._id !== batch._id)
+        prev.filter((s: any) => s._id !== batch._id),
       );
     } else {
       setSelectedBatches((prev: any) => [...prev, batch]);
@@ -919,24 +919,24 @@ function EditPaperModal({
     updateAssignment.append("grade", formData.grade);
     updateAssignment.append(
       "createdDate",
-      new Date().toISOString().split("T")[0]
+      new Date().toISOString().split("T")[0],
     );
     updateAssignment.append("assignedTo", JSON.stringify(selectedBatches));
     updateAssignment.append("assignedBy", formData.assignedBy);
     updateAssignment.append("totalMarks", formData.totalMarks);
     updateAssignment.append(
       "isSubmissionInClass",
-      formData.isSubmissionInClass
+      formData.isSubmissionInClass,
     );
     updateAssignment.append("isSubmissionOpen", formData.isSubmissionOpen);
     updateAssignment.append(
       "questionPaperLink",
-      formData.questionPaperLink as File
+      formData.questionPaperLink as File,
     );
     try {
       const response = await axios.put(
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/assignment/updateAssignment`,
-        updateAssignment
+        updateAssignment,
       );
       console.log("Successfully created assignment -> ", response.data);
       onSave(updateAssignment);
@@ -951,10 +951,10 @@ function EditPaperModal({
         <CardHeader>
           <CardTitle className="text-3xl font-black text-black flex items-center">
             <Plus className="w-8 h-8 mr-4 text-green-600" />
-            EDIT QUESTION PAPER
+            UPLOAD QUESTION PAPER
           </CardTitle>
           <p className="text-gray-600 font-bold text-lg">
-            Edit your question paper
+            Create and assign a new question paper
           </p>
         </CardHeader>
         <CardContent>
@@ -967,10 +967,13 @@ function EditPaperModal({
                 </label>
                 <input
                   type="text"
+                  value={formData.title}
+                  onChange={(e) =>
+                    setFormData({ ...formData, title: e.target.value })
+                  }
                   className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400"
                   placeholder="Enter question paper title"
                   required
-                  defaultValue={formData.title}
                 />
               </div>
 
@@ -1016,69 +1019,68 @@ function EditPaperModal({
                   <option value="12th">12th</option>
                 </select>
               </div>
-
-              <div>
-                <label className="block text-sm font-black text-black mb-2">
-                  Total Marks *
-                </label>
-                <input
-                  type="number"
-                  value={formData.totalMarks}
-                  onChange={(e) =>
-                    setFormData({ ...formData, totalMarks: e.target.value })
-                  }
-                  className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400"
-                  placeholder="Enter total marks"
-                  min="1"
-                  required
-                />
+              <div className="flex justify-center items-center flex-col">
+                <div className="w-full">
+                  <label className="block text-sm font-black text-black mb-2">
+                    Total Marks *
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.totalMarks}
+                    onChange={(e) =>
+                      setFormData({ ...formData, totalMarks: e.target.value })
+                    }
+                    className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400"
+                    placeholder="Enter total marks"
+                    min="1"
+                    required
+                  />
+                </div>
+                <div className="w-full mt-5">
+                  <label className="block text-sm font-black text-black mb-2">
+                    Assigned By *
+                  </label>
+                  <select
+                    value={formData.assignedBy}
+                    onChange={(e) =>
+                      setFormData({ ...formData, assignedBy: e.target.value })
+                    }
+                    className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                    required
+                  >
+                    <option value="">Select Teacher</option>
+                    {teachers.map((teacher: any) => (
+                      <option key={teacher._id} value={teacher._id}>
+                        {teacher.fullName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
-            </div>
-
-            {/* Assignment Information */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div>
+              {/* Assignment Information */}
+              <div className="flex justify-start items-start flex-col">
                 <label className="block text-sm font-black text-black mb-2">
-                  Assigned By *
+                  Assign to *
                 </label>
                 <select
-                  value={formData.assignedBy}
-                  onChange={(e) =>
-                    setFormData({ ...formData, assignedBy: e.target.value })
-                  }
-                  className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                  required
+                  multiple
+                  className="border-2 border-black rounded-xl w-full p-4 max-h-40 overflow-y-auto bg-white"
                 >
-                  <option value="">Select Teacher</option>
-                  {teachers.map((teacher: any) => (
-                    <option key={teacher._id} value={teacher._id}>
-                      {teacher.fullName}
+                  {filteredBatches.map((batch: any) => (
+                    <option
+                      key={batch._id}
+                      value={batch._id}
+                      onClick={() => handleBatchToggleEdit(batch)}
+                      className={`p-3 border-2 rounded-lg cursor-pointer transition-all text-sm font-bold ${
+                        formData.assignedTo.includes(batch)
+                          ? "bg-green-100 border-green-500 text-green-700"
+                          : "bg-gray-50 border-gray-300 hover:bg-gray-100"
+                      }`}
+                    >
+                      {batch.name}
                     </option>
                   ))}
                 </select>
-              </div>
-
-              <div className="border-2 border-black rounded-xl p-4 max-h-32 overflow-y-auto bg-white">
-                {filteredBatches.map((batch: any) => {
-                  const isSelected = selectedBatches.some(
-                    (b: any) => b._id === batch._id
-                  );
-
-                  return (
-                    <div
-                      key={batch._id}
-                      onClick={() => handleBatchToggleEdit(batch)}
-                      className={`border w-1/4 rounded m-2 p-2 cursor-pointer transition ${
-                        isSelected ? "bg-green-200" : "bg-white"
-                      }`}
-                    >
-                      <div className="font-semibold">{batch.name}</div>
-                      <div className="text-sm text-gray-600">
-                        {batch.standard}
-                      </div>
-                    </div>
-                  );
-                })}
               </div>
             </div>
 
@@ -1162,8 +1164,6 @@ function EditPaperModal({
                     <div className="font-black text-gray-700 text-lg">
                       {formData.questionPaperLink
                         ? formData.questionPaperLink.name
-                          ? formData.questionPaperLink.name
-                          : formData.questionPaperLink.split("/").pop()
                         : "Click to upload or drag and drop"}
                     </div>
                     <div className="text-sm font-bold text-gray-500">
