@@ -43,7 +43,7 @@ export default function TeacherDashboard() {
   const [selectedAssignment, setSelectedAssignment] = useState<any>(null);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [batches, setBatches] = useState<any[]>([]);
+  const [batches, setBatches] = useState<any>();
   const [teachers, setTeachers] = useState<any[]>([]);
   const [teacherEmailID, setTeacherEmailID] = useState<string[]>([]);
   const [teacherName, setTeacherName] = useState<any[]>([]);
@@ -92,7 +92,7 @@ export default function TeacherDashboard() {
       console.log(fullName);
       console.log(email);
 
-      fetchQuestionPaperDetails(email);
+      await fetchQuestionPaperDetails(email);
 
       if (userType !== "teacher") {
         router.push("/");
@@ -114,7 +114,6 @@ export default function TeacherDashboard() {
 
   const fetchQuestionPaperDetails = async (teacherEmail: string[]) => {
     try {
-      console.log("Here at 119 -> ", teacherEmail);
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/assignment/getAssignmentWRTTeacher`,
         {
@@ -126,7 +125,6 @@ export default function TeacherDashboard() {
       const assignmentData = response.data;
       setQuestionPapers(assignmentData);
       await fetchingTeacherAndBatchDisplayDetails(assignmentData);
-      console.log(assignmentData);
     } catch (error) {
       console.error("Error in fetching assignment details:", error);
     }
@@ -152,8 +150,6 @@ export default function TeacherDashboard() {
           return response.data.assignedToData.name;
         }),
       );
-
-      console.log("Batch names: ", batchNames, assignmentID);
 
       setDisplayedBatches((prev) => ({
         ...prev,
@@ -265,9 +261,6 @@ export default function TeacherDashboard() {
     }
   };
 
-  console.log("Displayed batches: ", displayedBatches);
-  console.log("Displayed teachers: ", displayedTeacher);
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black p-6">
       <div className="max-w-7xl mx-auto">
@@ -329,6 +322,14 @@ export default function TeacherDashboard() {
             </div>
           </Card>
 
+          <Card className="bg-gradient-to-br from-white to-gray-50 border-2 border-green-500 rounded-2xl shadow-lg p-6 text-center">
+            <Clock className="w-8 h-8 text-green-600 mx-auto mb-3" />
+            <div className="text-3xl font-black text-black">
+              {questionPapers.reduce((sum, a) => sum + a.checkCount, 0)}
+            </div>
+            <div className="text-sm font-semibold text-gray-600">Graded</div>
+          </Card>
+          
           <Card className="bg-gradient-to-br from-green-500 to-green-600 border-2 border-white rounded-2xl shadow-lg p-6 text-center">
             <Users className="w-8 h-8 text-white mx-auto mb-3" />
             <div className="text-3xl font-black text-white">
@@ -337,14 +338,6 @@ export default function TeacherDashboard() {
             <div className="text-sm font-semibold text-white/90">
               Submissions
             </div>
-          </Card>
-
-          <Card className="bg-gradient-to-br from-white to-gray-50 border-2 border-green-500 rounded-2xl shadow-lg p-6 text-center">
-            <Clock className="w-8 h-8 text-green-600 mx-auto mb-3" />
-            <div className="text-3xl font-black text-black">
-              {questionPapers.reduce((sum, a) => sum + a.checkCount, 0)}
-            </div>
-            <div className="text-sm font-semibold text-gray-600">Graded</div>
           </Card>
         </div>
 
@@ -375,7 +368,7 @@ export default function TeacherDashboard() {
                     className="bg-gray-50 border-2 border-gray-200 rounded-xl hover:bg-gray-100 transition-colors"
                   >
                     <CardContent className="flex justify-between p-3">
-                      <div className="grid grid-cols-2 lg:grid-cols-8 items-center">
+                      <div className="grid grid-cols-2 lg:grid-cols-8 items-center w-full">
                         <div className="lg:col-span-2">
                           <h3 className="text-xl font-black text-black mb-1">
                             {paper.title}
@@ -398,14 +391,6 @@ export default function TeacherDashboard() {
                             {paper.grade}
                           </span>
                         </div>
-                        {/* <div className="text-center">
-                          <div className="text-2xl font-black text-green-600">
-                            {paper.assignedTo?.length}
-                          </div>
-                          <div className="text-sm font-semibold text-gray-600">
-                            Batch{paper.assignedTo?.length === 1 ? "" : "es"}
-                          </div>
-                        </div> */}
                         <div className="text-center">
                           <div className="text-2xl font-black text-green-600">
                             {paper.checkCount} / {paper.submitCount}
@@ -434,25 +419,22 @@ export default function TeacherDashboard() {
                             }
                           </p>
                         </div>
-                        <div className="flex">
+                        <div className="flex justify-center items-center">
                           <Button
                             onClick={() => handleViewAssignment(paper)}
-                            className="bg-green-500 hover:bg-green-600 text-white font-black border-2 border-black text-xs px-2 py-2 rounded-xl"
+                            className="bg-green-500 mx-1 hover:bg-green-600 text-white font-black border-2 border-black text-xs px-2 py-2 rounded-xl"
                           >
                             <Eye className="w-3 h-3" />
                           </Button>
-                          <Button className="bg-white hover:bg-gray-100 text-black font-black border-2 border-black text-xs px-2 py-2 rounded-xl">
-                            <Download className="w-4 h-4" />
-                          </Button>
                           <Button
                             onClick={() => handleEditAssignment(paper)}
-                            className="bg-blue-500 text-black font-bold border-2 border-black text-xs px-2 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                            className="bg-blue-500 mx-1 text-black font-bold border-2 border-black text-xs px-2 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                           >
                             <Edit className="w-3 h-3" />
                           </Button>
                           <Button
                             onClick={() => handleDeleteBatch(paper._id)}
-                            className="mr-5 bg-red-500 text-black hover:text-white font-bold border-2 border-black text-xs px-2 py-2 rounded-lg hover:bg-gray-800 transition-colors"
+                            className="bg-red-500 mx-1 text-black hover:text-white font-bold border-2 border-black text-xs px-2 py-2 rounded-lg hover:bg-gray-800 transition-colors"
                           >
                             <Trash2 className="w-3 h-3" />
                           </Button>
@@ -491,12 +473,17 @@ export default function TeacherDashboard() {
               setShowEditModal(false);
               setSelectedAssignment(null);
             }}
-            onSave={(updatedBatch) => {
-              setBatches(
-                batches.map((b) =>
-                  b.id === updatedBatch.id ? updatedBatch : b,
+            onSave={(updatedAssignment) => {
+              // Update the questionPapers state with the updated assignment
+              setQuestionPapers((prevPapers) =>
+                prevPapers.map((paper) =>
+                  paper._id === updatedAssignment._id
+                    ? updatedAssignment
+                    : paper,
                 ),
               );
+              // Optionally refetch to ensure data is fresh
+              fetchQuestionPaperDetails(teacherEmailID);
               setShowEditModal(false);
               setSelectedAssignment(null);
             }}
@@ -717,7 +704,7 @@ function UploadPaperModal({
                 multiple
                 className="border-2 border-black rounded-xl p-4 max-h-32 overflow-y-auto bg-white"
               >
-                {batches.map((batch: any) => (
+                {batches.batchData.map((batch: any) => (
                   <option
                     key={batch._id}
                     value={batch._id}
@@ -902,7 +889,10 @@ function EditPaperModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    console.log("Formdata before submit: ", formData);
+
     const updateAssignment = new FormData();
+    updateAssignment.append("_id", formData._id);
     updateAssignment.append("title", formData.title);
     updateAssignment.append("subject", formData.subject);
     updateAssignment.append("grade", formData.grade);
@@ -919,17 +909,20 @@ function EditPaperModal({
     );
     updateAssignment.append("isSubmissionOpen", formData.isSubmissionOpen);
     updateAssignment.append(
-      "questionPaperLink",
-      formData.questionPaperLink as File,
+      "submitCount",
+      String(Number(formData.submitCount)),
     );
-    console.log("Update assignment: ",updateAssignment);
+    updateAssignment.append("checkCount", String(Number(formData.checkCount)));
+    console.log("Question Paper:", formData.questionPaperLink);
+    updateAssignment.append("questionPaperLink", formData.questionPaperLink);
+    console.log("Update assignment: ", updateAssignment);
     try {
       const response = await axios.put(
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/assignment/updateAssignment`,
         updateAssignment,
       );
       console.log("Successfully created assignment -> ", response.data);
-      onSave(updateAssignment);
+      onSave(response.data);
     } catch (error) {
       console.error("Error in updating an assignment:", error);
       return new Response("Internal Server Error", { status: 500 });
@@ -1080,10 +1073,13 @@ function EditPaperModal({
                   type="number"
                   value={formData.checkCount}
                   onChange={(e) =>
-                    setFormData({ ...formData, checkCount: e.target.value })
+                    setFormData({
+                      ...formData,
+                      checkCount: Number(e.target.value),
+                    })
                   }
                   className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400"
-                  placeholder="Enter total marks"
+                  placeholder="Enter checked count"
                   min="1"
                   required
                 />
@@ -1097,10 +1093,13 @@ function EditPaperModal({
                   type="number"
                   value={formData.submitCount}
                   onChange={(e) =>
-                    setFormData({ ...formData, submitCount: e.target.value })
+                    setFormData({
+                      ...formData,
+                      submitCount: Number(e.target.value),
+                    })
                   }
                   className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400"
-                  placeholder="Enter total marks"
+                  placeholder="Enter submit count"
                   min="1"
                   required
                 />
@@ -1186,7 +1185,7 @@ function EditPaperModal({
                     <div className="text-6xl">📄</div>
                     <div className="font-black text-gray-700 text-lg">
                       {formData.questionPaperLink
-                        ? formData.questionPaperLink.name
+                        ? formData.questionPaperLink
                         : "Click to upload or drag and drop"}
                     </div>
                     <div className="text-sm font-bold text-gray-500">
@@ -1231,6 +1230,7 @@ function ViewPaperModal({
   displayedTeacher: any;
   displayedBatches: any;
 }) {
+  console.log(displayedTeacher);
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <Card className="bg-white border-2 border-green-500 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
@@ -1264,10 +1264,10 @@ function ViewPaperModal({
                     <span className="font-semibold">Total Marks:</span>{" "}
                     {assignment.totalMarks}
                   </p>
-                  <p>
+                  {/* <p>
                     <span className="font-semibold">Teacher:</span>{" "}
-                    {displayedTeacher[assignment.assignedBy] || "NA"}
-                  </p>
+                    {displayedTeacher.find((t:any) => t._id === assignment.assignedBy) || "NA"}
+                  </p> */}
                   <p>
                     <span className="font-semibold">Created:</span>{" "}
                     {assignment.createdAt}
