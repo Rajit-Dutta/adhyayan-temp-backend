@@ -15,6 +15,9 @@ import {
   Download,
   Clock,
   TrendingUp,
+  FileText,
+  MessageSquare,
+  Layers,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
@@ -101,10 +104,16 @@ export default function TeacherDashboard() {
 
       // Step 2: Get teacher data using email
       const teacherRes = await axios.get(
-        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getTeacherData`,
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getTeacherNameUsingEmail`,
+        {
+          params: {
+            email: email,
+          },
+        },
       );
 
       const teacherPayload = teacherRes.data;
+      console.log("Teacher payload: ", teacherPayload);
       setTeacher(teacherPayload); // Assuming this is the parsed object already
     } catch (error) {
       console.error("Error during teacher dashboard data fetch:", error);
@@ -274,7 +283,7 @@ export default function TeacherDashboard() {
               {teacher.subject} Teacher Dashboard
             </p>
             <p className="text-lg font-medium text-gray-300">
-              Classes: {teacher.teacherData.classesToTeach?.join(", ")}
+              Classes: {teacher.classesToTeach?.join(", ")}
             </p>
           </div>
           <div className="flex space-x-3">
@@ -329,7 +338,7 @@ export default function TeacherDashboard() {
             </div>
             <div className="text-sm font-semibold text-gray-600">Graded</div>
           </Card>
-          
+
           <Card className="bg-gradient-to-br from-green-500 to-green-600 border-2 border-white rounded-2xl shadow-lg p-6 text-center">
             <Users className="w-8 h-8 text-white mx-auto mb-3" />
             <div className="text-3xl font-black text-white">
@@ -338,6 +347,58 @@ export default function TeacherDashboard() {
             <div className="text-sm font-semibold text-white/90">
               Submissions
             </div>
+          </Card>
+        </div>
+
+        {/* Feature Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card
+            className="bg-gradient-to-br from-blue-500 to-blue-600 border-2 border-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer"
+            onClick={() =>
+              router.push(`/teacher/${teacher._id || "default"}/marks`)
+            }
+          >
+            <CardContent className="text-center p-0">
+              <FileText className="w-10 h-10 text-white mx-auto mb-4" />
+              <h3 className="text-xl font-black text-white mb-2">
+                Marks Management
+              </h3>
+              <p className="text-sm text-white/90">
+                Give, edit, and manage student marks
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card
+            className="bg-gradient-to-br from-purple-500 to-purple-600 border-2 border-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer"
+            onClick={() =>
+              router.push(`/teacher/${teacher._id || "default"}/feedback`)
+            }
+          >
+            <CardContent className="text-center p-0">
+              <MessageSquare className="w-10 h-10 text-white mx-auto mb-4" />
+              <h3 className="text-xl font-black text-white mb-2">
+                Student Feedback
+              </h3>
+              <p className="text-sm text-white/90">
+                Provide performance feedback and ratings
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card
+            className="bg-gradient-to-br from-orange-500 to-orange-600 border-2 border-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer"
+            onClick={() =>
+              router.push(`/teacher/${teacher._id || "default"}/batches`)
+            }
+          >
+            <CardContent className="text-center p-0">
+              <Layers className="w-10 h-10 text-white mx-auto mb-4" />
+              <h3 className="text-xl font-black text-white mb-2">My Batches</h3>
+              <p className="text-sm text-white/90">
+                View and manage your teaching batches
+              </p>
+            </CardContent>
           </Card>
         </div>
 

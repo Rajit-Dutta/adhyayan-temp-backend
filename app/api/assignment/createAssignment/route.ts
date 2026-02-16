@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
   const subject = formData.get("subject") as string;
   const grade = formData.get("grade") as string;
   const assignedBy = formData.get("assignedBy") as string;
+  const submitDate = formData.get("submitDate") as string;
   const assignedTo = JSON.parse(formData.get("assignedTo") as string);
   const totalMarks = Number(formData.get("totalMarks"));
   const isSubmissionInClass = formData.get("isSubmissionInClass") === "true";
@@ -59,6 +60,7 @@ export async function POST(req: NextRequest) {
         assignedTo,
         assignedBy,
         totalMarks,
+        submitDate,
         questionPaperLink: data.publicUrl,
         isSubmissionInClass,
         isSubmissionOpen,
@@ -77,6 +79,7 @@ export async function POST(req: NextRequest) {
           assignedTo,
           assignedBy,
           totalMarks,
+          submitDate,
           questionPaperLink: data.publicUrl,
           isSubmissionInClass,
           isSubmissionOpen,

@@ -13,6 +13,7 @@ const assignmentSchema = new Schema(
     isSubmissionOpen: { type: Boolean, default: true },
     submitCount: { type: Number, default: 0 },
     checkCount: { type: Number, default: 0 },
+    submitDate: { type: Date },
     createdAt: { type: Date, default: Date.now },
   },
   { timestamps: true },

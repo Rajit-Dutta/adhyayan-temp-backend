@@ -6,8 +6,10 @@ export async function GET(request: NextRequest) {
   try {
     await dbConnect();
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get("teacherId");
-    const teacherDetails = await teacherModel.findById(id);
+    const email = searchParams.get("email");
+    const teacherDetails = await teacherModel.findOne({
+      email: email,
+    });
     if (!teacherDetails) {
       return new Response("No teacher found", { status: 404 });
     }

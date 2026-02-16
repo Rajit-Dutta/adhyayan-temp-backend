@@ -1,13 +1,16 @@
 import { dbConnect } from "@/lib/db";
-import teacherModel from "@/models/Teacher";
+import batchModel from "@/models/Batch";
 import { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
   try {
     await dbConnect();
     const { searchParams } = new URL(request.url);
-    const id = searchParams.get("teacherId");
-    const teacherDetails = await teacherModel.findById(id);
+    const id = searchParams.get("teacherID");
+    const teacherDetails = await batchModel.find({
+      teacher: id,
+    });
+    console.log(teacherDetails)
     if (!teacherDetails) {
       return new Response("No teacher found", { status: 404 });
     }

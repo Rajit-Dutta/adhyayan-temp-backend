@@ -21,11 +21,12 @@ import axios from "axios";
 export default function QuestionPapersPage() {
   const router = useRouter();
   type QuestionPaper = {
-    _id: number;
+    _id: string;
     title: string;
     subject: string;
     grade: string;
     createdAt: string;
+    submitDate?: string;
     assignedBy: string;
     assignedTo?: string[];
     totalMarks?: number;
@@ -58,16 +59,23 @@ export default function QuestionPapersPage() {
     assignedTo: [], // array of batch IDs like ['6887a8d35ad88efee4b9c1f2']
     assignedBy: "", // the admin ID (must be a stringified ObjectId)
     totalMarks: "",
+    submitDate: "",
     isSubmissionInClass: false,
     isSubmissionOpen: true,
     questionPaperLink: null,
   });
 
   useEffect(() => {
-    fetchAdminData();
-    fetchTeacherNames();
-    fetchBatchDetails();
-    fetchQuestionPaperDetails();
+    const load = async () => {
+      await Promise.all([
+        fetchAdminData(),
+        fetchTeacherNames(),
+        fetchBatchDetails(),
+        fetchQuestionPaperDetails(),
+      ]);
+    };
+
+    load();
   }, []);
 
   const fetchAdminData = async () => {
@@ -76,7 +84,7 @@ export default function QuestionPapersPage() {
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/getUserType`,
         {
           withCredentials: true,
-        }
+        },
       );
 
       const { userType, email } = userRes.data.jwtDecoded;
@@ -105,7 +113,7 @@ export default function QuestionPapersPage() {
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/getAdminData`,
         {
           params: { email },
-        }
+        },
       );
 
       const adminPayload = adminRes.data.teacherData;
@@ -121,7 +129,7 @@ export default function QuestionPapersPage() {
   const fetchTeacherNames = async () => {
     try {
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getTeacherData`
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getTeacherData`,
       );
       setTeachers(response.data.teacherData);
     } catch (error) {
@@ -133,7 +141,7 @@ export default function QuestionPapersPage() {
   const fetchBatchDetails = async () => {
     try {
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getBatchData`
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/getBatchData`,
       );
       setBatches(response.data.batchData);
     } catch (error) {
@@ -145,7 +153,7 @@ export default function QuestionPapersPage() {
   const fetchQuestionPaperDetails = async () => {
     try {
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_DOMAIN}/api/assignment/getAssignment`
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/assignment/getAssignment`,
       );
       const assignmentData = response.data;
       setQuestionPapers(assignmentData);
@@ -156,7 +164,7 @@ export default function QuestionPapersPage() {
   };
 
   const fetchingTeacherAndBatchDisplayDetails = async (
-    assignmentData: any[]
+    assignmentData: any[],
   ) => {
     try {
       // 🔹 Fetch teacher names
@@ -165,13 +173,13 @@ export default function QuestionPapersPage() {
           `${process.env.NEXT_PUBLIC_DOMAIN}/api/getTeacherDisplayData`,
           {
             params: { teacherId: assignment.assignedBy },
-          }
-        )
+          },
+        ),
       );
       const teacherResponses = await Promise.all(teacherPromises);
       const teacherMap: { [key: string]: string } = {};
       teacherResponses.forEach((res, i) => {
-        teacherMap[assignmentData[i].assignedBy] = res.data;
+        teacherMap[assignmentData[i].assignedBy] = res.data.fullName;
       });
       setDisplayedTeacher(teacherMap);
 
@@ -179,8 +187,8 @@ export default function QuestionPapersPage() {
       const allBatchIds = [
         ...new Set(
           assignmentData.flatMap((assignment) =>
-            assignment.assignedTo.map((id: any) => String(id))
-          )
+            assignment.assignedTo.map((id: any) => String(id)),
+          ),
         ),
       ];
 
@@ -193,14 +201,14 @@ export default function QuestionPapersPage() {
           },
           paramsSerializer: (params) =>
             params.batchIds.map((id: string) => `batchIds=${id}`).join("&"),
-        }
+        },
       );
 
       setDisplayedBatches(batchRes.data); // a map { studentId: "Name" }
     } catch (error) {
       console.error(
         "Error in fetching teacher or batch display details:",
-        error
+        error,
       );
     }
   };
@@ -233,12 +241,14 @@ export default function QuestionPapersPage() {
           `${process.env.NEXT_PUBLIC_DOMAIN}/api/assignment/deleteAssignment`,
           {
             params: { id: assignmentId },
-          }
+          },
         );
         console.log("Assignment deleted successfully:", response.data);
 
         setQuestionPapers((prevAssgn) =>
-          prevAssgn.filter((assignment) => assignment._id !== assignmentId)
+          prevAssgn.filter(
+            (assignment) => parseInt(assignment._id) !== assignmentId,
+          ),
         );
       } catch (error) {
         console.error("Error deleting batch:", error);
@@ -421,8 +431,34 @@ export default function QuestionPapersPage() {
                               hour: "numeric",
                               minute: "2-digit",
                               hour12: true,
-                            }
+                            },
                           )}
+                        </p>
+                      </div>
+                      <div className="text-center">
+                        <p className="font-semibold text-gray-700 text-sm">
+                          {paper.submitDate
+                            ? new Date(paper.submitDate).toLocaleDateString(
+                                "en-US",
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "2-digit",
+                                },
+                              )
+                            : "N/A"}
+                        </p>
+                        <p className="text-gray-700 font-bold text-xs mt-1">
+                          {paper.submitDate
+                            ? new Date(paper.submitDate).toLocaleTimeString(
+                                "en-US",
+                                {
+                                  hour: "numeric",
+                                  minute: "2-digit",
+                                  hour12: true,
+                                },
+                              )
+                            : ""}
                         </p>
                       </div>
                       <div className="flex">
@@ -442,7 +478,7 @@ export default function QuestionPapersPage() {
                           <Edit className="w-3 h-3" />
                         </Button>
                         <Button
-                          onClick={() => handleDeleteBatch(paper._id)}
+                          onClick={() => handleDeleteBatch(parseInt(paper._id))}
                           className="mr-5 bg-black text-white font-bold border-2 border-gray-300 text-xs px-2 py-2 rounded-lg hover:bg-gray-800 transition-colors"
                         >
                           <Trash2 className="w-3 h-3" />
@@ -481,12 +517,15 @@ export default function QuestionPapersPage() {
               setShowEditModal(false);
               setSelectedAssignment(null);
             }}
-            onSave={(updatedBatch) => {
-              setBatches(
-                batches.map((b) =>
-                  b.id === updatedBatch.id ? updatedBatch : b
-                )
+            onSave={(updatedAssignment) => {
+              setQuestionPapers((prev) =>
+                prev.map((paper) =>
+                  paper._id === updatedAssignment._id
+                    ? updatedAssignment
+                    : paper,
+                ),
               );
+
               setShowEditModal(false);
               setSelectedAssignment(null);
             }}
@@ -540,7 +579,7 @@ function UploadPaperModal({
       (formData.grade &&
         formData.subject &&
         batch.standard === formData.grade &&
-        batch.subject === formData.subject)
+        batch.subject === formData.subject),
   );
 
   const handleBatchToggle = (batch: string) => {
@@ -580,18 +619,19 @@ function UploadPaperModal({
     newAssignment.append("createdDate", new Date().toISOString().split("T")[0]);
     newAssignment.append("assignedTo", JSON.stringify(formData.assignedTo));
     newAssignment.append("assignedBy", formData.assignedBy);
+    newAssignment.append("submitDate", formData.submitDate);
     newAssignment.append("totalMarks", formData.totalMarks);
     newAssignment.append("isSubmissionInClass", formData.isSubmissionInClass);
     newAssignment.append("isSubmissionOpen", formData.isSubmissionOpen);
     newAssignment.append(
       "questionPaperLink",
-      formData.questionPaperLink as File
+      formData.questionPaperLink as File,
     );
 
     try {
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_DOMAIN}/api/assignment/createAssignment`,
-        newAssignment
+        newAssignment,
       );
       console.log("Successfully created assignment -> ", response.data);
       onSave(response.data);
@@ -639,48 +679,63 @@ function UploadPaperModal({
                   required
                 />
               </div>
+              <div className="grid lg:grid-cols-3 grid-cols-1 col-span-2 gap-6">
+                <div>
+                  <label className="block text-sm font-black text-black mb-2">
+                    Subject *
+                  </label>
+                  <select
+                    value={formData.subject}
+                    onChange={(e) =>
+                      setFormData({ ...formData, subject: e.target.value })
+                    }
+                    className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                    required
+                  >
+                    <option value="">Select Subject</option>
+                    <option value="Mathematics">Mathematics</option>
+                    <option value="Science">Science</option>
+                    <option value="English">English</option>
+                    <option value="History">History</option>
+                    <option value="Physics">Physics</option>
+                    <option value="Chemistry">Chemistry</option>
+                    <option value="Biology">Biology</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-black text-black mb-2">
+                    Grade *
+                  </label>
+                  <select
+                    value={formData.grade}
+                    onChange={(e) =>
+                      setFormData({ ...formData, grade: e.target.value })
+                    }
+                    className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                    required
+                  >
+                    <option value="">Select Grade</option>
+                    <option value="9th">9th</option>
+                    <option value="10th">10th</option>
+                    <option value="11th">11th</option>
+                    <option value="12th">12th</option>
+                  </select>
+                </div>
+                <div className="">
+                  <label className="block text-sm font-black text-black mb-2">
+                    SubmitDate *
+                  </label>
 
-              <div>
-                <label className="block text-sm font-black text-black mb-2">
-                  Subject *
-                </label>
-                <select
-                  value={formData.subject}
-                  onChange={(e) =>
-                    setFormData({ ...formData, subject: e.target.value })
-                  }
-                  className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                  required
-                >
-                  <option value="">Select Subject</option>
-                  <option value="Mathematics">Mathematics</option>
-                  <option value="Science">Science</option>
-                  <option value="English">English</option>
-                  <option value="History">History</option>
-                  <option value="Physics">Physics</option>
-                  <option value="Chemistry">Chemistry</option>
-                  <option value="Biology">Biology</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-black text-black mb-2">
-                  Grade *
-                </label>
-                <select
-                  value={formData.grade}
-                  onChange={(e) =>
-                    setFormData({ ...formData, grade: e.target.value })
-                  }
-                  className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                  required
-                >
-                  <option value="">Select Grade</option>
-                  <option value="9th">9th</option>
-                  <option value="10th">10th</option>
-                  <option value="11th">11th</option>
-                  <option value="12th">12th</option>
-                </select>
+                  <input
+                    type="date"
+                    value={formData.submitDate}
+                    onChange={(e) =>
+                      setFormData({ ...formData, submitDate: e.target.value })
+                    }
+                    className="p-4 w-full border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                    required
+                  />
+                </div>
               </div>
               <div className="flex justify-center items-center flex-col">
                 <div className="w-full">
@@ -887,15 +942,10 @@ function EditPaperModal({
       assignment.assignedTo.includes(b._id),
     ),
   );
-
-  console.log("formData -> ", formData);
-
+  console.log(formData);
   const filteredBatches = availableBatches.batchData.filter(
     (batch: any) => formData.grade === "" || batch.standard === formData.grade,
   );
-
-  console.log("Available batches -> ", availableBatches);
-  console.log("Filtered batches -> ", filteredBatches);
 
   const handleBatchToggleEdit = (batch: any) => {
     const isSelected = selectedBatches.some((b: any) => b._id === batch._id);
@@ -914,6 +964,7 @@ function EditPaperModal({
     e.preventDefault();
 
     const updateAssignment = new FormData();
+    updateAssignment.append("_id", formData._id);
     updateAssignment.append("title", formData.title);
     updateAssignment.append("subject", formData.subject);
     updateAssignment.append("grade", formData.grade);
@@ -924,6 +975,7 @@ function EditPaperModal({
     updateAssignment.append("assignedTo", JSON.stringify(selectedBatches));
     updateAssignment.append("assignedBy", formData.assignedBy);
     updateAssignment.append("totalMarks", formData.totalMarks);
+    updateAssignment.append("submitDate", formData.submitDate);
     updateAssignment.append(
       "isSubmissionInClass",
       formData.isSubmissionInClass,
@@ -939,7 +991,7 @@ function EditPaperModal({
         updateAssignment,
       );
       console.log("Successfully created assignment -> ", response.data);
-      onSave(updateAssignment);
+      onSave(response.data.updatedAssignment);
     } catch (error) {
       console.error("Error in updating an assignment:", error);
       return new Response("Internal Server Error", { status: 500 });
@@ -976,48 +1028,63 @@ function EditPaperModal({
                   required
                 />
               </div>
+              <div className="grid lg:grid-cols-3 grid-cols-1 gap-6 col-span-2">
+                <div>
+                  <label className="block text-sm font-black text-black mb-2">
+                    Subject *
+                  </label>
+                  <select
+                    value={formData.subject}
+                    onChange={(e) =>
+                      setFormData({ ...formData, subject: e.target.value })
+                    }
+                    className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                    required
+                  >
+                    <option value="">Select Subject</option>
+                    <option value="Mathematics">Mathematics</option>
+                    <option value="Science">Science</option>
+                    <option value="English">English</option>
+                    <option value="History">History</option>
+                    <option value="Physics">Physics</option>
+                    <option value="Chemistry">Chemistry</option>
+                    <option value="Biology">Biology</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-black text-black mb-2">
+                    Grade *
+                  </label>
+                  <select
+                    value={formData.grade}
+                    onChange={(e) =>
+                      setFormData({ ...formData, grade: e.target.value })
+                    }
+                    className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                    required
+                  >
+                    <option value="">Select Grade</option>
+                    <option value="9th">9th</option>
+                    <option value="10th">10th</option>
+                    <option value="11th">11th</option>
+                    <option value="12th">12th</option>
+                  </select>
+                </div>
+                <div className="">
+                  <label className="block text-sm font-black text-black mb-2">
+                    SubmitDate *
+                  </label>
 
-              <div>
-                <label className="block text-sm font-black text-black mb-2">
-                  Subject *
-                </label>
-                <select
-                  value={formData.subject}
-                  onChange={(e) =>
-                    setFormData({ ...formData, subject: e.target.value })
-                  }
-                  className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                  required
-                >
-                  <option value="">Select Subject</option>
-                  <option value="Mathematics">Mathematics</option>
-                  <option value="Science">Science</option>
-                  <option value="English">English</option>
-                  <option value="History">History</option>
-                  <option value="Physics">Physics</option>
-                  <option value="Chemistry">Chemistry</option>
-                  <option value="Biology">Biology</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-black text-black mb-2">
-                  Grade *
-                </label>
-                <select
-                  value={formData.grade}
-                  onChange={(e) =>
-                    setFormData({ ...formData, grade: e.target.value })
-                  }
-                  className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                  required
-                >
-                  <option value="">Select Grade</option>
-                  <option value="9th">9th</option>
-                  <option value="10th">10th</option>
-                  <option value="11th">11th</option>
-                  <option value="12th">12th</option>
-                </select>
+                  <input
+                    type="date"
+                    value={formData.submitDate?.split("T")[0] || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, submitDate: e.target.value })
+                    }
+                    className="p-4 w-full border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                    required
+                  />
+                </div>
               </div>
               <div className="flex justify-center items-center flex-col">
                 <div className="w-full">
@@ -1163,7 +1230,11 @@ function EditPaperModal({
                     <div className="text-6xl">📄</div>
                     <div className="font-black text-gray-700 text-lg">
                       {formData.questionPaperLink
-                        ? formData.questionPaperLink.name
+                        ? typeof formData.questionPaperLink === "string"
+                          ? decodeURIComponent(
+                              formData.questionPaperLink.split("/").pop(),
+                            ).replace(/\.[^/.]+.*/, (m) => m.split("-")[0])
+                          : formData.questionPaperLink.name
                         : "Click to upload or drag and drop"}
                     </div>
                     <div className="text-sm font-bold text-gray-500">
@@ -1259,7 +1330,7 @@ function ViewPaperModal({
                     window.open(
                       assignment.questionPaperLink,
                       "_blank",
-                      "noopener,noreferrer"
+                      "noopener,noreferrer",
                     )
                   }
                 >
@@ -1274,7 +1345,7 @@ function ViewPaperModal({
                     {Array.isArray(displayedBatches.batchData) &&
                       assignment.assignedTo.map((a: any) => {
                         const batch = displayedBatches.batchData.find(
-                          (batch: any) => batch._id === a
+                          (batch: any) => batch._id === a,
                         );
                         return (
                           <li key={a}>

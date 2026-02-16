@@ -13,12 +13,15 @@ export async function PUT(request: NextRequest) {
     await dbConnect();
     const formData = await request.formData();
 
+    console.log(formData);
+
     const id = formData.get("_id") as string;
     const title = formData.get("title") as string;
     const subject = formData.get("subject") as string;
     const grade = formData.get("grade") as string;
     const assignedBy = formData.get("assignedBy") as string;
     const assignedTo = JSON.parse(formData.get("assignedTo") as string);
+    const submitDate = formData.get("submitDate") as string;
     const totalMarks = Number(formData.get("totalMarks"));
     const isSubmissionInClass = formData.get("isSubmissionInClass") === "true";
     const isSubmissionOpen = formData.get("isSubmissionOpen") === "true";
@@ -33,6 +36,8 @@ export async function PUT(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    console.log("Existing assignment: ",existingAssignment);
 
     let fileUrl = existingAssignment.questionPaperLink; 
 
@@ -72,6 +77,7 @@ export async function PUT(request: NextRequest) {
         assignedTo,
         assignedBy,
         totalMarks,
+        submitDate,
         questionPaperLink: fileUrl, // ✅ Use either new or existing URL
         isSubmissionInClass,
         isSubmissionOpen,
@@ -80,6 +86,8 @@ export async function PUT(request: NextRequest) {
       },
       { new: true }
     );
+
+    console.log(updatedAssignment);
 
     if (!updatedAssignment) {
       return NextResponse.json(

@@ -30,6 +30,8 @@ type Batch = {
 
 export default function TeacherBatchesPage() {
   const router = useRouter();
+  const params = useParams();
+  const teacherId = params.teacherId as string;
 
   const [batches, setBatches] = useState<Batch[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -47,33 +49,13 @@ export default function TeacherBatchesPage() {
     try {
       setLoading(true);
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_DOMAIN}/api/batch/getBatchData`,
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/batch/getBatchData`
       );
-      const batchDetails = await Promise.all(
-        response.data.map(async (batch: Batch) => {
-          const studentResponse = await axios.get(
-            `${process.env.NEXT_PUBLIC_DOMAIN}/api/getStudentDisplayData`,
-            {
-              params: {
-                studentIds: batch.students,
-              },
-              paramsSerializer: (params) =>
-                params.studentIds
-                  .map((id: string) => `studentIds=${id}`)
-                  .join("&"),
-            },
-          );
-          return {
-            ...batch,
-            students: batch.students.map((id: string) => ({
-              id,
-              name: studentResponse.data[id],
-            })),
-          };
-        }),
+      // Filter batches for current teacher
+      const teacherBatches = response.data.filter(
+        (batch: Batch) => batch.teacher === teacherId
       );
-      console.log(batchDetails);
-      setBatches(batchDetails);
+      setBatches(teacherBatches);
     } catch (error) {
       console.error("Error fetching batches:", error);
     } finally {
@@ -107,7 +89,7 @@ export default function TeacherBatchesPage() {
           {
             batchId: selectedBatch._id,
             ...data,
-          },
+          }
         );
         // Update syllabus separately
         await axios.put(
@@ -115,13 +97,13 @@ export default function TeacherBatchesPage() {
           {
             batchId: selectedBatch._id,
             syllabus: data.syllabus,
-          },
+          }
         );
       } else {
         // Create new batch
         await axios.post(
           `${process.env.NEXT_PUBLIC_DOMAIN}/api/batch/createBatch`,
-          data,
+          data
         );
       }
       await fetchBatches();
@@ -136,7 +118,7 @@ export default function TeacherBatchesPage() {
   const filteredBatches = batches.filter(
     (batch) =>
       batch.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      batch.subject.toLowerCase().includes(searchTerm.toLowerCase()),
+      batch.subject.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
@@ -156,9 +138,7 @@ export default function TeacherBatchesPage() {
             <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600 mb-2">
               My Batches
             </h1>
-            <p className="text-gray-300">
-              View and manage your teaching batches
-            </p>
+            <p className="text-gray-300">View and manage your teaching batches</p>
           </div>
           <Button
             onClick={() => router.back()}
@@ -201,7 +181,7 @@ export default function TeacherBatchesPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid lg:grid-cols-3 grid-cols-1 w-full gap-4">
+          <div className="space-y-4">
             {filteredBatches.map((batch) => (
               <Card
                 key={batch._id}
@@ -216,15 +196,11 @@ export default function TeacherBatchesPage() {
                       <div className="flex gap-4 mt-2">
                         <div>
                           <p className="text-sm text-gray-600">Subject</p>
-                          <p className="font-bold text-black">
-                            {batch.subject}
-                          </p>
+                          <p className="font-bold text-black">{batch.subject}</p>
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">Standard</p>
-                          <p className="font-bold text-black">
-                            {batch.standard}
-                          </p>
+                          <p className="font-bold text-black">{batch.standard}</p>
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">Status</p>
@@ -260,12 +236,12 @@ export default function TeacherBatchesPage() {
                         Students Enrolled:
                       </p>
                       <div className="flex flex-wrap gap-2">
-                        {batch.students.map((student, idx: number) => (
+                        {batch.students.map((student) => (
                           <span
-                            key={idx}
+                            key={student._id}
                             className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold"
                           >
-                            {student.name}
+                            {student.firstName} {student.lastName}
                           </span>
                         ))}
                       </div>

@@ -9,7 +9,7 @@ const assignmentSubmissionSchema = new Schema({
   assignedBy: { type: Schema.Types.ObjectId, ref: "Teacher", required: true },
   submittedBy: { type: Schema.Types.ObjectId, ref: "Student", required: true },
   checkedBy: { type: Schema.Types.ObjectId, ref: "Teacher" },
-  submissionDate: { type: Date, default: Date.now },
+  submitDate: { type: Date, default: Date.now },
   submissionLink: { type: String, required: true },
   marksScored: { type: Number, default: 0 },
   feedback: { type: String },

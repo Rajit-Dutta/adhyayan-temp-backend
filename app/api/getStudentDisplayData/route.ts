@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
     await dbConnect();
     const { searchParams } = new URL(request.url);
     const ids = searchParams.getAll("studentIds"); 
+    console.log(ids);
 
     const students = await studentModel.find({
       _id: { $in: ids },
