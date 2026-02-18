@@ -435,7 +435,7 @@ export default function QuestionPapersPage() {
                           )}
                         </p>
                       </div>
-                      <div className="text-center">
+                      {/* <div className="text-center">
                         <p className="font-semibold text-gray-700 text-sm">
                           {paper.submitDate
                             ? new Date(paper.submitDate).toLocaleDateString(
@@ -460,7 +460,7 @@ export default function QuestionPapersPage() {
                               )
                             : ""}
                         </p>
-                      </div>
+                      </div> */}
                       <div className="flex">
                         <Button
                           onClick={() => handleViewAssignment(paper)}
@@ -972,7 +972,11 @@ function EditPaperModal({
       "createdDate",
       new Date().toISOString().split("T")[0],
     );
-    updateAssignment.append("assignedTo", JSON.stringify(selectedBatches));
+    updateAssignment.append(
+      "assignedTo",
+      JSON.stringify(selectedBatches.map((b:any) => b._id)),
+    );
+
     updateAssignment.append("assignedBy", formData.assignedBy);
     updateAssignment.append("totalMarks", formData.totalMarks);
     updateAssignment.append("submitDate", formData.submitDate);
@@ -1138,8 +1142,8 @@ function EditPaperModal({
                       key={batch._id}
                       value={batch._id}
                       onClick={() => handleBatchToggleEdit(batch)}
-                      className={`p-3 border-2 rounded-lg cursor-pointer transition-all text-sm font-bold ${
-                        formData.assignedTo.includes(batch)
+                      className={`p-3 mb-1 border-2 rounded-lg cursor-pointer transition-all text-sm font-bold ${
+                        formData.assignedTo.includes(batch._id)
                           ? "bg-green-100 border-green-500 text-green-700"
                           : "bg-gray-50 border-gray-300 hover:bg-gray-100"
                       }`}
@@ -1318,7 +1322,11 @@ function ViewPaperModal({
                   </p>
                   <p>
                     <span className="font-semibold">Created:</span>{" "}
-                    {assignment.createdAt}
+                    {assignment.createdAt?.split("T")[0]}
+                  </p>
+                  <p>
+                    <span className="font-semibold">Submission:</span>{" "}
+                    {assignment.submitDate?.split("T")[0]}
                   </p>
                 </div>
               </div>

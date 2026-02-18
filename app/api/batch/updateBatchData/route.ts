@@ -5,11 +5,10 @@ import { NextRequest, NextResponse } from "next/server";
 export async function PUT(request: NextRequest) {
   try {
     await dbConnect();
-    const { name, subject, standard, teacher, status, students } =
+    const { name, subject, standard, teacher, status, students, syllabus } =
       await request.json();
 
     const existingBatch = await batchModel.findOne({ name, subject, standard });
-    console.log(existingBatch);
     if (existingBatch) {
       const _id = existingBatch._id;
       const updatedBatch = await batchModel.findByIdAndUpdate(
@@ -21,6 +20,7 @@ export async function PUT(request: NextRequest) {
           teacher,
           status,
           students,
+          syllabus,
         },
         { new: true }
       );

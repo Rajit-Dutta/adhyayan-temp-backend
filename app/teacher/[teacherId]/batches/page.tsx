@@ -32,10 +32,12 @@ export default function TeacherBatchesPage() {
   const router = useRouter();
   const params = useParams();
   const teacherId = params.teacherId as string;
+  console.log(teacherId);
 
   const [batches, setBatches] = useState<Batch[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedBatch, setSelectedBatch] = useState<Batch | null>(null);
+  const [studentMap, setStudentMap] = useState<{ [key: string]: any }>({});
   const [showModal, setShowModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -49,12 +51,36 @@ export default function TeacherBatchesPage() {
     try {
       setLoading(true);
       const response = await axios.get(
-        `${process.env.NEXT_PUBLIC_DOMAIN}/api/batch/getBatchData`
+        `${process.env.NEXT_PUBLIC_DOMAIN}/api/batch/getBatchData`,
       );
+      const map: { [key: string]: any } = {};
+      await Promise.all(
+        response.data.map(async (batch: Batch) => {
+          const studentResponse = await axios.get(
+            `${process.env.NEXT_PUBLIC_DOMAIN}/api/getStudentDisplayData`,
+            {
+              params: {
+                studentIds: batch.students,
+              },
+              paramsSerializer: (params) =>
+                params.studentIds
+                  .map((id: string) => `studentIds=${id}`)
+                  .join("&"),
+            },
+          );
+
+          Object.entries(studentResponse.data).forEach(([k, v]) => {
+            map[k] = v;
+          });
+        }),
+      );
+      setStudentMap(map);
       // Filter batches for current teacher
       const teacherBatches = response.data.filter(
-        (batch: Batch) => batch.teacher === teacherId
+        (batch: Batch) => batch.teacher === teacherId,
       );
+      console.log(teacherBatches);
+      console.log(studentMap);
       setBatches(teacherBatches);
     } catch (error) {
       console.error("Error fetching batches:", error);
@@ -82,6 +108,7 @@ export default function TeacherBatchesPage() {
 
   const handleSaveBatch = async (data: any) => {
     try {
+      console.log(data);
       if (isEditMode && selectedBatch) {
         // Update batch
         await axios.put(
@@ -89,21 +116,21 @@ export default function TeacherBatchesPage() {
           {
             batchId: selectedBatch._id,
             ...data,
-          }
+          },
         );
         // Update syllabus separately
-        await axios.put(
-          `${process.env.NEXT_PUBLIC_DOMAIN}/api/batch/updateSyllabus`,
-          {
-            batchId: selectedBatch._id,
-            syllabus: data.syllabus,
-          }
-        );
+        // await axios.put(
+        //   `${process.env.NEXT_PUBLIC_DOMAIN}/api/batch/updateSyllabus`,
+        //   {
+        //     batchId: selectedBatch._id,
+        //     syllabus: data.syllabus,
+        //   },
+        // );
       } else {
         // Create new batch
         await axios.post(
           `${process.env.NEXT_PUBLIC_DOMAIN}/api/batch/createBatch`,
-          data
+          data,
         );
       }
       await fetchBatches();
@@ -118,7 +145,7 @@ export default function TeacherBatchesPage() {
   const filteredBatches = batches.filter(
     (batch) =>
       batch.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      batch.subject.toLowerCase().includes(searchTerm.toLowerCase())
+      batch.subject.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   if (loading) {
@@ -138,7 +165,9 @@ export default function TeacherBatchesPage() {
             <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600 mb-2">
               My Batches
             </h1>
-            <p className="text-gray-300">View and manage your teaching batches</p>
+            <p className="text-gray-300">
+              View and manage your teaching batches
+            </p>
           </div>
           <Button
             onClick={() => router.back()}
@@ -166,6 +195,7 @@ export default function TeacherBatchesPage() {
         </Card>
 
         {/* Batches List */}
+
         {filteredBatches.length === 0 ? (
           <Card className="bg-gradient-to-br from-white to-gray-50 border-2 border-orange-500 rounded-2xl shadow-lg">
             <CardContent className="flex flex-col items-center justify-center p-12">
@@ -181,7 +211,7 @@ export default function TeacherBatchesPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
+          <div className="grid lg:grid-cols-3 grid-cols-1 w-full gap-4">
             {filteredBatches.map((batch) => (
               <Card
                 key={batch._id}
@@ -196,11 +226,15 @@ export default function TeacherBatchesPage() {
                       <div className="flex gap-4 mt-2">
                         <div>
                           <p className="text-sm text-gray-600">Subject</p>
-                          <p className="font-bold text-black">{batch.subject}</p>
+                          <p className="font-bold text-black">
+                            {batch.subject}
+                          </p>
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">Standard</p>
-                          <p className="font-bold text-black">{batch.standard}</p>
+                          <p className="font-bold text-black">
+                            {batch.standard}
+                          </p>
                         </div>
                         <div>
                           <p className="text-sm text-gray-600">Status</p>
@@ -230,18 +264,18 @@ export default function TeacherBatchesPage() {
                 <CardContent className="space-y-4">
                   {/* Students List */}
                   {batch.students && batch.students.length > 0 && (
-                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 h-30 overflow-y-auto">
                       <p className="text-sm font-bold text-blue-700 mb-2">
                         <Users className="w-4 h-4 inline mr-1" />
                         Students Enrolled:
                       </p>
                       <div className="flex flex-wrap gap-2">
-                        {batch.students.map((student) => (
+                        {batch.students.map((student, idx: number) => (
                           <span
-                            key={student._id}
+                            key={idx}
                             className="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold"
                           >
-                            {student.firstName} {student.lastName}
+                            {studentMap[student]}
                           </span>
                         ))}
                       </div>
@@ -249,26 +283,19 @@ export default function TeacherBatchesPage() {
                   )}
 
                   {/* Syllabus List */}
-                  {batch.syllabus && batch.syllabus.length > 0 && (
-                    <div className="bg-green-50 p-3 rounded-lg border border-green-200">
-                      <p className="text-sm font-bold text-green-700 mb-2">
+                  {batch.syllabus && batch.syllabus.length >= 0 && (
+                    <div className="bg-green-50 p-3 rounded-lg border border-green-200 h-50 overflow-y-auto flex justify-start items-center">
+                      <p className="text-sm font-bold text-green-700">
                         <BookOpen className="w-4 h-4 inline mr-1" />
-                        Syllabus:
+                        Syllabus covered:
                       </p>
-                      <ol className="list-decimal list-inside space-y-1">
-                        {batch.syllabus.map((chapter: any, idx: number) => (
-                          <li
-                            key={idx}
-                            className={`text-sm font-semibold ${
-                              chapter.topicCovered
-                                ? "line-through text-gray-500"
-                                : "text-green-700"
-                            }`}
-                          >
-                            {chapter.chapterName}
-                          </li>
-                        ))}
-                      </ol>
+                      <p className="font-extrabold ml-2 text-green-800">
+                        {(batch.syllabus.filter(
+                          (syllabus: any) => syllabus.topicCovered,
+                        ).length /
+                          batch.syllabus.length) *
+                          100}%
+                      </p>
                     </div>
                   )}
 
@@ -300,6 +327,7 @@ export default function TeacherBatchesPage() {
           <BatchDetailModal
             isOpen={showDetailModal}
             batch={selectedBatch}
+            studentMap={studentMap}
             onClose={() => {
               setShowDetailModal(false);
               setSelectedBatch(null);

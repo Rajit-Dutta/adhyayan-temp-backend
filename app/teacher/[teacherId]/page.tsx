@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import { formatDate } from "date-fns";
 
 type QuestionPaper = {
   _id: string;
@@ -624,6 +625,10 @@ function UploadPaperModal({
     newAssignment.append("createdDate", new Date().toISOString().split("T")[0]);
     newAssignment.append("assignedTo", JSON.stringify(formData.assignedTo));
     newAssignment.append("assignedBy", formData.assignedBy);
+    newAssignment.append(
+      "submitDate",
+      formData.submitDate.toISOString().split("T")[0],
+    );
     newAssignment.append("totalMarks", formData.totalMarks);
     newAssignment.append("isSubmissionInClass", formData.isSubmissionInClass);
     newAssignment.append("isSubmissionOpen", formData.isSubmissionOpen);
@@ -930,10 +935,6 @@ function EditPaperModal({
     (batch: any) => formData.grade === "" || batch.standard === formData.grade,
   );
 
-  console.log("Available batches -> ", availableBatches);
-  console.log("Filtered batches -> ", filteredBatches);
-  console.log("Displayed teacher -> ", teachers);
-
   const handleBatchToggleEdit = (batch: any) => {
     const isSelected = selectedBatches.some((b: any) => b._id === batch._id);
 
@@ -968,6 +969,7 @@ function EditPaperModal({
       "isSubmissionInClass",
       formData.isSubmissionInClass,
     );
+    updateAssignment.append("submitDate", formData.submitDate);
     updateAssignment.append("isSubmissionOpen", formData.isSubmissionOpen);
     updateAssignment.append(
       "submitCount",
@@ -1020,48 +1022,63 @@ function EditPaperModal({
                   required
                 />
               </div>
+              <div className="grid lg:grid-cols-3 grid-cols-1 gap-6 col-span-2">
+                <div>
+                  <label className="block text-sm font-black text-black mb-2">
+                    Subject *
+                  </label>
+                  <select
+                    value={formData.subject}
+                    onChange={(e) =>
+                      setFormData({ ...formData, subject: e.target.value })
+                    }
+                    className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                    required
+                  >
+                    <option value="">Select Subject</option>
+                    <option value="Mathematics">Mathematics</option>
+                    <option value="Science">Science</option>
+                    <option value="English">English</option>
+                    <option value="History">History</option>
+                    <option value="Physics">Physics</option>
+                    <option value="Chemistry">Chemistry</option>
+                    <option value="Biology">Biology</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-black text-black mb-2">
+                    Grade *
+                  </label>
+                  <select
+                    value={formData.grade}
+                    onChange={(e) =>
+                      setFormData({ ...formData, grade: e.target.value })
+                    }
+                    className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                    required
+                  >
+                    <option value="">Select Grade</option>
+                    <option value="9th">9th</option>
+                    <option value="10th">10th</option>
+                    <option value="11th">11th</option>
+                    <option value="12th">12th</option>
+                  </select>
+                </div>
+                <div className="">
+                  <label className="block text-sm font-black text-black mb-2">
+                    SubmitDate *
+                  </label>
 
-              <div>
-                <label className="block text-sm font-black text-black mb-2">
-                  Subject *
-                </label>
-                <select
-                  value={formData.subject}
-                  onChange={(e) =>
-                    setFormData({ ...formData, subject: e.target.value })
-                  }
-                  className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                  required
-                >
-                  <option value="">Select Subject</option>
-                  <option value="Mathematics">Mathematics</option>
-                  <option value="Science">Science</option>
-                  <option value="English">English</option>
-                  <option value="History">History</option>
-                  <option value="Physics">Physics</option>
-                  <option value="Chemistry">Chemistry</option>
-                  <option value="Biology">Biology</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-black text-black mb-2">
-                  Grade *
-                </label>
-                <select
-                  value={formData.grade}
-                  onChange={(e) =>
-                    setFormData({ ...formData, grade: e.target.value })
-                  }
-                  className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
-                  required
-                >
-                  <option value="">Select Grade</option>
-                  <option value="9th">9th</option>
-                  <option value="10th">10th</option>
-                  <option value="11th">11th</option>
-                  <option value="12th">12th</option>
-                </select>
+                  <input
+                    type="date"
+                    value={formData.submitDate?.split("T")[0] || ""}
+                    onChange={(e) =>
+                      setFormData({ ...formData, submitDate: e.target.value })
+                    }
+                    className="p-4 w-full border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400 bg-white"
+                    required
+                  />
+                </div>
               </div>
               <div className="flex justify-center items-center flex-col">
                 <div className="w-full">
@@ -1132,7 +1149,7 @@ function EditPaperModal({
                 </label>
                 <input
                   type="number"
-                  value={formData.checkCount}
+                  value={formData.checkCount ?? ""}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
@@ -1141,7 +1158,6 @@ function EditPaperModal({
                   }
                   className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400"
                   placeholder="Enter checked count"
-                  min="1"
                   required
                 />
               </div>
@@ -1152,7 +1168,7 @@ function EditPaperModal({
                 </label>
                 <input
                   type="number"
-                  value={formData.submitCount}
+                  value={formData.submitCount ?? ""}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
@@ -1161,7 +1177,6 @@ function EditPaperModal({
                   }
                   className="w-full p-4 border-2 border-black rounded-xl font-bold focus:outline-none focus:ring-2 focus:ring-green-400"
                   placeholder="Enter submit count"
-                  min="1"
                   required
                 />
               </div>
@@ -1246,7 +1261,11 @@ function EditPaperModal({
                     <div className="text-6xl">📄</div>
                     <div className="font-black text-gray-700 text-lg">
                       {formData.questionPaperLink
-                        ? formData.questionPaperLink
+                        ? typeof formData.questionPaperLink === "string"
+                          ? decodeURIComponent(
+                              formData.questionPaperLink.split("/").pop(),
+                            ).replace(/\.[^/.]+.*/, (m) => m.split("-")[0])
+                          : formData.questionPaperLink.name
                         : "Click to upload or drag and drop"}
                     </div>
                     <div className="text-sm font-bold text-gray-500">
@@ -1331,7 +1350,11 @@ function ViewPaperModal({
                   </p> */}
                   <p>
                     <span className="font-semibold">Created:</span>{" "}
-                    {assignment.createdAt}
+                    {assignment.createdAt?.split("T")[0]}
+                  </p>
+                  <p>
+                    <span className="font-semibold">Submission:</span>{" "}
+                    {assignment.submitDate?.split("T")[0]}
                   </p>
                 </div>
               </div>

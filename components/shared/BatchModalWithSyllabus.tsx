@@ -133,6 +133,7 @@ export default function BatchModalWithSyllabus({
       topicCovered: chapter.topicCovered || false,
       order: index,
     }));
+    console.log("processedSyllabus: ",processedSyllabus);
 
     onSave({
       ...formData,

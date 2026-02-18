@@ -16,6 +16,7 @@ import {
 interface BatchDetailModalProps {
   isOpen: boolean;
   batch: any;
+  studentMap:any;
   onClose: () => void;
   onEdit: () => void;
 }
@@ -23,6 +24,7 @@ interface BatchDetailModalProps {
 export default function BatchDetailModal({
   isOpen,
   batch,
+  studentMap,
   onClose,
   onEdit,
 }: BatchDetailModalProps) {
@@ -132,9 +134,7 @@ export default function BatchDetailModal({
                   >
                     <User className="w-4 h-4 text-blue-600 flex-shrink-0" />
                     <span className="font-bold text-blue-900">
-                      {typeof student === "string"
-                        ? student
-                        : `${student.name}`}
+                      {studentMap[student]}
                     </span>
                   </div>
                 ))}
@@ -144,7 +144,7 @@ export default function BatchDetailModal({
 
           {/* Syllabus Section */}
           {batch.syllabus && batch.syllabus.length > 0 && (
-            <div className="bg-green-50 p-4 rounded-xl border-2 border-green-200">
+            <div className="bg-green-50 p-4 h-60 rounded-xl border-2 border-green-200 overflow-y-auto">
               <div className="flex items-center gap-2 mb-4">
                 <BookOpen className="w-6 h-6 text-green-600" />
                 <h3 className="text-lg font-black text-green-900">
